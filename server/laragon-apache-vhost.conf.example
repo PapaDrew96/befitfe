@@ -1,0 +1,28 @@
+define ROOT "C:/laragon/www/befit-frontend"
+define SITE "befit.test"
+
+<VirtualHost *:8082>
+    DocumentRoot "${ROOT}"
+    ServerName ${SITE}
+
+    <Directory "${ROOT}">
+        AllowOverride All
+        Require all granted
+        Options -Indexes +FollowSymLinks
+    </Directory>
+</VirtualHost>
+
+<VirtualHost *:443>
+    DocumentRoot "${ROOT}"
+    ServerName ${SITE}
+
+    <Directory "${ROOT}">
+        AllowOverride All
+        Require all granted
+        Options -Indexes +FollowSymLinks
+    </Directory>
+
+    SSLEngine on
+    SSLCertificateFile      "C:/laragon/etc/ssl/laragon.crt"
+    SSLCertificateKeyFile   "C:/laragon/etc/ssl/laragon.key"
+</VirtualHost>
