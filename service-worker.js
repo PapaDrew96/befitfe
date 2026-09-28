@@ -10,7 +10,7 @@ const APP_SHELL = [
   './assets/js/i18n.js',
   './assets/js/api.js',
   './assets/js/app.js',
-  './assets/img/logo.jpg',
+  './assets/img/logo1.jpg',
   './assets/img/icon-192.png',
   './assets/img/icon-512.png'
 ];
