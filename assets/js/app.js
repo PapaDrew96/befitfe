@@ -398,273 +398,14 @@
     if (!$.fn.select2) return;
     $(scope || document).find('select.select2').each(function () {
       var $select = $(this);
-      if ($select.hasClass('select2-hidden-accessible')) {
-        $select.select2('destroy');
-      }
-      var $modal = $select.closest('.modal');
-      $select.select2({
-        width: '100%',
-        placeholder: $select.attr('data-placeholder') || undefined,
-        allowClear: $select.attr('data-allow-clear') === 'true',
-        minimumResultsForSearch: $select.attr('data-search') === 'false' ? Infinity : 0,
-        dropdownParent: $modal.length ? $modal : $(document.body)
-      });
-    });
-  }
 
-  /* Member schedule */
-  async function renderSchedulePage(options) {
-    options = options || {};
-    setPageMeta('Schedule', 'Member');
-    if (!state.weekDate) state.weekDate = todayYmd();
-    if (!options.silent) $('#pageContent').html(pageSkeleton());
+from pathlib import Path
 
-    var version = state.routeVersion;
-    try {
-      var results = await Promise.all([
-        Api.get('/schedule/week', { date: state.weekDate }),
-        Api.get('/announcements')
-      ]);
-      if (version !== state.routeVersion || state.route !== '#/schedule') return;
-      state.currentSchedule = results[0].data;
-      state.announcements = results[1].data || [];
-      state.weekDate = state.currentSchedule.week_start;
+path = Path("/mnt/data/app.full.fixed.js")
+lines = path.read_text(encoding="utf-8").splitlines()
 
-      var availableDates = state.currentSchedule.days.map(function (d) { return d.date; });
-      if (!state.selectedDate || availableDates.indexOf(state.selectedDate) === -1) {
-        state.selectedDate = availableDates.indexOf(todayYmd()) !== -1 ? todayYmd() : state.currentSchedule.week_start;
-      }
-      drawSchedule();
-    } catch (error) {
-      $('#pageContent').html(emptyState('alert-circle', 'Unable to load schedule', Api.errorMessage(error), '<button class="btn btn-brand" data-retry-route type="button">Try again</button>'));
-    }
-  }
-
-  function drawSchedule() {
-    var schedule = state.currentSchedule;
-    if (!schedule) return;
-    var selected = schedule.days.find(function (day) { return day.date === state.selectedDate; }) || schedule.days[0];
-    var announcement = state.announcements && state.announcements.length ? state.announcements[0] : null;
-
-    var daysHtml = schedule.days.map(function (day) {
-      var d = parseYmd(day.date);
-      var active = day.date === selected.date ? ' active' : '';
-      var closed = day.is_closed ? ' closed' : '';
-      return '<button type="button" class="day-button' + active + closed + '" data-schedule-day="' + day.date + '">' +
-        '<span class="day-name">' + escapeHtml(new Intl.DateTimeFormat(config.DATE_LOCALE, { weekday: 'short' }).format(d)) + '</span>' +
-        '<span class="day-number">' + d.getDate() + '</span>' +
-        '<span class="day-dot"></span></button>';
-    }).join('');
-
-    var sessionsHtml = '';
-    if (selected.is_closed) {
-      sessionsHtml += '<div class="closed-notice"><strong>Gym closed</strong><div class="small mt-1">' + escapeHtml(selected.closure_reason || 'No sessions are available on this date.') + '</div></div>';
-    }
-    if (!selected.sessions.length) {
-      sessionsHtml += emptyState('calendar', 'No sessions', selected.is_closed ? 'The gym is closed on this date.' : 'There are no training sessions scheduled for this day.');
-    } else {
-      sessionsHtml += '<div class="sessions-list">' + selected.sessions.map(sessionCard).join('') + '</div>';
-    }
-
-    var announcementHtml = announcement ? '<div class="announcement-banner mb-3"><div class="announcement-banner-icon">' + icon('megaphone') + '</div><div class="min-w-0"><h3>' + escapeHtml(announcement.title) + '</h3><p>' + escapeHtml(announcement.body) + '</p></div><button class="btn btn-sm btn-light ms-auto flex-shrink-0" type="button" data-route="#/announcements">View</button></div>' : '';
-
-    $('#pageContent').html(
-      '<div class="content-grid">' +
-        '<section class="week-picker">' +
-          '<div class="week-picker-top"><button class="week-nav-btn" type="button" data-week-shift="-7" aria-label="Previous week">' + icon('chevron-left') + '</button>' +
-          '<div class="text-center"><div class="eyebrow text-white-50 mb-1">Weekly program</div><div class="week-range">' + escapeHtml(formatWeekRange(schedule.week_start, schedule.week_end)) + '</div></div>' +
-          '<button class="week-nav-btn" type="button" data-week-shift="7" aria-label="Next week">' + icon('chevron-right') + '</button></div>' +
-          '<div class="day-strip">' + daysHtml + '</div>' +
-        '</section>' +
-        announcementHtml +
-        '<section><div class="schedule-header"><div><h2>' + escapeHtml(formatDate(selected.date, { weekday: 'long', day: 'numeric', month: 'long' })) + '</h2><p>' + (selected.sessions.length ? selected.sessions.length + ' sessions available' : 'No scheduled sessions') + '</p></div>' +
-        (selected.date !== todayYmd() ? '<button class="btn btn-sm btn-soft" type="button" data-go-today>' + icon('calendar') + ' Today</button>' : '') + '</div>' + sessionsHtml + '</section>' +
-      '</div>'
-    );
-  }
-
-  function sessionCard(session) {
-    var percent = session.capacity ? Math.min(100, Math.round((session.booked_count / session.capacity) * 100)) : 0;
-    var classes = 'session-card' + (session.is_booked_by_me ? ' is-mine' : '') + (session.status !== 'open' ? ' is-closed' : '');
-    var statusBadge = session.status !== 'open'
-      ? '<span class="badge-soft-danger">' + escapeHtml(session.status === 'cancelled' ? 'Cancelled' : 'Closed') + '</span>'
-      : session.is_full
-        ? '<span class="badge-soft-danger">Full</span>'
-        : session.is_booked_by_me
-          ? '<span class="badge-soft-brand">' + icon('check', 'me-1') + ' Your booking</span>'
-          : '<span class="badge-soft-success">' + session.available_count + ' places left</span>';
-
-    var attendees = session.attendees && session.attendees.length
-      ? '<div class="attendee-list">' + session.attendees.map(function (person) {
-          return '<span class="attendee-chip' + (person.user_id === state.user.id ? ' me' : '') + '">' + escapeHtml(person.display_name) + '</span>';
-        }).join('') + '</div>'
-      : '';
-
-    var action = '';
-    if (session.is_booked_by_me && session.my_booking_id) {
-      action = '<button class="btn btn-outline-danger btn-sm" type="button" data-cancel-booking="' + session.my_booking_id + '">Cancel booking</button>';
-    } else if (session.is_waitlisted_by_me && session.my_waitlist_id) {
-      action = '<button class="btn btn-outline-secondary btn-sm" type="button" data-leave-waitlist="' + session.my_waitlist_id + '">Leave waiting list</button>';
-    } else if (session.booking_allowed) {
-      action = '<button class="btn btn-brand btn-sm" type="button" data-book-session="' + session.id + '">' + icon('plus') + ' Reserve place</button>';
-    } else if (session.waitlist_allowed) {
-      action = '<button class="btn btn-dark btn-sm" type="button" data-join-waitlist="' + session.id + '">' + icon('clock') + ' Join waiting list</button>';
-    } else if (session.is_full && session.status === 'open') {
-      action = '<button class="btn btn-light btn-sm" type="button" disabled>Session full</button>';
-    }
-
-    return '<article class="' + classes + '"><div class="session-main"><div class="session-time"><strong>' + escapeHtml(session.start_time) + '</strong><small>' + (session.end_time ? 'to ' + escapeHtml(session.end_time) : 'Training') + '</small></div>' +
-      '<div class="session-details"><div class="session-meta-row">' + statusBadge + (session.note ? '<span class="badge-soft-muted">' + escapeHtml(session.note) + '</span>' : '') + '</div>' +
-      '<div class="capacity-row"><span>' + session.booked_count + ' booked</span><span>' + session.booked_count + ' / ' + session.capacity + '</span></div>' +
-      '<div class="capacity-track"><div class="capacity-fill' + (session.is_full ? ' full' : '') + '" style="width:' + percent + '%"></div></div>' + (session.waitlist_count ? '<div class="small text-muted mt-2">' + session.waitlist_count + ' on waiting list</div>' : '') + attendees + '</div></div>' +
-      (session.closure_reason ? '<div class="small text-danger mt-2">' + escapeHtml(session.closure_reason) + '</div>' : '') +
-      (action ? '<div class="session-actions">' + action + '</div>' : '') + '</article>';
-  }
-
-  /* Member bookings */
-  async function renderMyBookings() {
-    setPageMeta('My bookings', 'Member');
-    $('#pageContent').html(pageSkeleton());
-    var version = state.routeVersion;
-    try {
-      var response = await Api.get('/bookings', { from: todayYmd(), to: addDays(todayYmd(), config.SCHEDULE_DAYS_AHEAD) });
-      if (version !== state.routeVersion) return;
-      var items = response.data || [];
-      var active = items.filter(function (item) { return item.status === 'booked'; });
-      var history = items.filter(function (item) { return item.status !== 'booked'; });
-      var html = '<div class="page-toolbar"><div><h2 class="section-card-title">Upcoming training</h2><p class="section-card-subtitle">Your confirmed reservations for the next ' + config.SCHEDULE_DAYS_AHEAD + ' days.</p></div><button class="btn btn-brand" type="button" data-route="#/schedule">' + icon('plus') + ' Book a session</button></div>';
-      html += active.length ? '<div class="booking-list">' + active.map(bookingCard).join('') + '</div>' : emptyState('calendar-check', 'No upcoming bookings', 'Choose a session from the weekly schedule.', '<button class="btn btn-brand" type="button" data-route="#/schedule">Open schedule</button>');
-      if (history.length) {
-        html += '<div class="mt-4"><h3 class="section-card-title mb-3">Attendance / history</h3><div class="booking-list">' + history.map(bookingCard).join('') + '</div></div>';
-      }
-      $('#pageContent').html(html);
-    } catch (error) {
-      $('#pageContent').html(emptyState('alert-circle', 'Unable to load bookings', Api.errorMessage(error), '<button class="btn btn-brand" data-retry-route type="button">Try again</button>'));
-    }
-  }
-
-  function bookingCard(booking) {
-    var date = parseYmd(booking.date);
-    var cancelled = booking.status === 'cancelled';
-    return '<article class="booking-card' + (cancelled ? ' cancelled' : '') + '"><div class="booking-date-box"><div><strong>' + date.getDate() + '</strong><span>' + escapeHtml(new Intl.DateTimeFormat(config.DATE_LOCALE, { month: 'short' }).format(date)) + '</span></div></div>' +
-      '<div class="min-w-0"><h3>' + escapeHtml(new Intl.DateTimeFormat(config.DATE_LOCALE, { weekday: 'long' }).format(date)) + ' · ' + escapeHtml(booking.start_time) + '</h3><p>' + escapeHtml(formatDate(booking.date)) + (booking.end_time ? ' · ' + escapeHtml(booking.start_time + '–' + booking.end_time) : '') + '</p><div class="mt-2">' + (booking.status === 'checked_in' ? '<span class="badge-soft-brand">Checked in</span>' : booking.status === 'no_show' ? '<span class="badge-soft-danger">No-show</span>' : cancelled ? '<span class="badge-soft-muted">Cancelled</span>' : '<span class="badge-soft-success">Confirmed</span>') + '</div></div>' +
-      '<div class="booking-action">' + (booking.status === 'booked' && isFutureSession(booking.date, booking.start_time) ? '<button class="btn btn-outline-danger btn-sm" type="button" data-cancel-booking="' + booking.id + '">Cancel</button>' : '') + '</div></article>';
-  }
-
-  /* Announcements */
-  /* Member payments */
-  function paymentStatusBadge(status) {
-    if (status === 'paid') return '<span class="badge-soft-success">' + t('Paid') + '</span>';
-    if (status === 'expired') return '<span class="badge-soft-danger">' + t('Expired') + '</span>';
-    return '<span class="badge-soft-muted">' + t('Unpaid') + '</span>';
-  }
-
-  async function renderMyPayments() {
-    setPageMeta(t('My payments'), t('Member'));
-    $('#pageContent').html(pageSkeleton());
-    try {
-      var response = await Api.get('/payments');
-      var data = response.data || {};
-      var history = data.history || [];
-      var message = data.status === 'paid' ? 'Your payment is currently valid.' : data.status === 'expired' ? 'Your last recorded payment has expired.' : 'No payment has been recorded yet.';
-      var rows = history.map(function (item) {
-        return '<tr><td>' + escapeHtml(formatDate(item.payment_date)) + '</td><td>' + escapeHtml(formatDate(item.valid_until)) + '</td><td>' + escapeHtml(item.confirmed_by_name || '—') + '</td></tr>';
-      }).join('');
-      $('#pageContent').html(
-        '<div class="page-toolbar"><div><h2 class="section-card-title">' + t('Membership payment') + '</h2><p class="section-card-subtitle">' + t('Your membership payment status is managed by the gym administrator.') + '</p></div></div>' +
-        '<div class="content-grid two-column"><section class="section-card payment-current-card"><div class="section-card-header"><div><h2 class="section-card-title">' + t('Current membership') + '</h2><p class="section-card-subtitle">' + t(message) + '</p></div>' + paymentStatusBadge(data.status) + '</div>' +
-        '<div class="payment-validity"><span>' + t('Paid until') + '</span><strong>' + (data.paid_until ? escapeHtml(formatDate(data.paid_until, { day:'numeric', month:'long', year:'numeric' })) : '—') + '</strong></div></section>' +
-        '<section class="section-card"><div class="d-flex gap-3 align-items-start"><div class="announcement-banner-icon">' + icon('info') + '</div><div><h2 class="section-card-title mb-1">' + t('Payment status') + '</h2><p class="section-card-subtitle mb-0">' + t('This does not block bookings if the payment is expired.') + '</p></div></div></section></div>' +
-        '<section class="section-card mt-4"><div class="section-card-header"><div><h2 class="section-card-title">' + t('Payment history') + '</h2></div></div><div class="table-responsive"><table class="table"><thead><tr><th>' + t('Payment date') + '</th><th>' + t('Valid until') + '</th><th>' + t('Confirmed by') + '</th></tr></thead><tbody>' + (rows || '<tr><td colspan="3">' + t('No payment history yet.') + '</td></tr>') + '</tbody></table></div></section>'
-      );
-    } catch (error) {
-      $('#pageContent').html(emptyState('alert-circle', t('Unable to load payments'), Api.errorMessage(error)));
-    }
-  }
-
-  async function renderAnnouncementsPage() {
-    setPageMeta('Announcements', 'Member');
-    $('#pageContent').html(pageSkeleton());
-    try {
-      var response = await Api.get('/announcements');
-      var items = response.data || [];
-      $('#pageContent').html(items.length ? '<div class="announcement-list">' + items.map(announcementCard).join('') + '</div>' : emptyState('bell', 'No announcements', 'The gym has not posted any active announcements.'));
-    } catch (error) {
-      $('#pageContent').html(emptyState('alert-circle', 'Unable to load announcements', Api.errorMessage(error)));
-    }
-  }
-
-  function announcementCard(item, adminActions) {
-    return '<article class="announcement-card"><div class="d-flex align-items-start gap-3"><div class="announcement-banner-icon">' + icon('megaphone') + '</div><div class="flex-grow-1 min-w-0"><div class="d-flex align-items-start justify-content-between gap-2"><div><h3>' + escapeHtml(item.title) + '</h3>' + (adminActions ? '<div class="mb-2">' + (item.is_active ? '<span class="badge-soft-success">Active</span>' : '<span class="badge-soft-muted">Inactive</span>') + '</div>' : '') + '</div>' + (adminActions ? '<div class="table-actions"><button class="btn btn-light table-action-btn" type="button" data-announcement-edit="' + item.id + '" aria-label="Edit">' + icon('edit') + '</button><button class="btn btn-light text-danger table-action-btn" type="button" data-announcement-delete="' + item.id + '" aria-label="Delete">' + icon('trash') + '</button></div>' : '') + '</div><p>' + escapeHtml(item.body) + '</p><div class="announcement-meta"><span>Starts ' + escapeHtml(formatDateTime(item.starts_at)) + '</span>' + (item.expires_at ? '<span>Expires ' + escapeHtml(formatDateTime(item.expires_at)) + '</span>' : '<span>No expiry</span>') + (item.author_name ? '<span>By ' + escapeHtml(item.author_name) + '</span>' : '') + '</div></div></div></article>';
-  }
-
-  /* Profile */
-  async function renderProfilePage() {
-    setPageMeta('Profile', 'Account');
-    $('#pageContent').html(pageSkeleton());
-    try {
-      var response = await Api.get('/profile');
-      saveUser(response.data);
-      var user = response.data;
-      var forcePassword = user.must_change_password ? '<div class="alert alert-warning border-0 shadow-sm"><strong>Change your temporary password.</strong><div class="small mt-1">Your account was created with a temporary password. You must choose a new password before using the rest of BE-FIT.</div></div>' : '';
-      var html = forcePassword + '<div class="content-grid two-column"><div class="content-grid">' +
-        '<section class="profile-hero"><span class="avatar">' + escapeHtml(initials(user)) + '</span><div class="min-w-0"><h2>' + escapeHtml(user.display_name) + '</h2><p class="text-capitalize">' + escapeHtml(user.role) + ' account · ' + escapeHtml(user.status) + '</p></div></section>' +
-        '<section class="section-card"><div class="section-card-header"><div><h2 class="section-card-title">Personal information</h2><p class="section-card-subtitle">Keep your contact information up to date.</p></div></div>' +
-        '<form id="profileForm"><div class="row g-3"><div class="col-sm-6"><label class="form-label">First name</label><input name="first_name" class="form-control" value="' + escapeHtml(user.first_name) + '" required></div><div class="col-sm-6"><label class="form-label">Last name</label><input name="last_name" class="form-control" value="' + escapeHtml(user.last_name) + '" required></div><div class="col-sm-6"><label class="form-label">Email</label><input name="email" type="email" class="form-control" value="' + escapeHtml(user.email || '') + '"></div><div class="col-sm-6"><label class="form-label">Phone</label><input name="phone" class="form-control" value="' + escapeHtml(user.phone || '') + '"></div></div><div class="d-flex justify-content-end mt-3"><button class="btn btn-brand" type="submit"><span class="button-label">Save profile</span><span class="spinner-border spinner-border-sm ms-2 d-none"></span></button></div></form></section>' +
-        '<section class="section-card"><div class="section-card-header"><div><h2 class="section-card-title">Change password</h2><p class="section-card-subtitle">Changing your password signs you out on every device.</p></div></div><form id="passwordForm"><div class="row g-3"><div class="col-md-6"><label class="form-label">Current password</label><input name="current_password" type="password" class="form-control" minlength="8" required></div><div class="col-md-6"><label class="form-label">New password</label><input name="new_password" type="password" class="form-control" minlength="8" required></div></div><div class="d-flex justify-content-end mt-3"><button class="btn btn-dark" type="submit"><span class="button-label">Change password</span><span class="spinner-border spinner-border-sm ms-2 d-none"></span></button></div></form></section></div>' +
-        '<aside class="content-grid"><section class="section-card"><h2 class="section-card-title mb-2">Account</h2><div class="small text-muted mb-3">Signed in as <strong class="text-dark">' + escapeHtml(user.email || user.phone || user.display_name) + '</strong>.</div><button id="profileInstallButton" class="btn btn-soft w-100 mb-2' + (state.deferredInstallPrompt ? '' : ' d-none') + '" type="button">' + icon('download') + ' Install BE-FIT</button><button class="btn btn-outline-danger w-100" type="button" data-logout>' + icon('log-out') + ' Log out</button></section>' +
-        '<section class="section-card"><div class="d-flex gap-3 align-items-start"><div class="announcement-banner-icon">' + icon('shield') + '</div><div><h2 class="section-card-title mb-1">Secure access</h2><p class="section-card-subtitle mb-0">Your session uses an authenticated Bearer token. Never share your password or access token.</p></div></div></section></aside></div>';
-      $('#pageContent').html(html);
-    } catch (error) {
-      $('#pageContent').html(emptyState('alert-circle', 'Unable to load profile', Api.errorMessage(error)));
-    }
-  }
-
-  /* Admin dashboard */
-  async function renderAdminDashboard(date) {
-    date = date || todayYmd();
-    setPageMeta('Dashboard', 'Administrator');
-    $('#pageContent').html(pageSkeleton());
-    try {
-      var response = await Api.get('/admin/dashboard', { date: date });
-      var d = response.data;
-      var next = d.next_session;
-      var html = '<div class="page-toolbar"><div><h2 class="section-card-title">' + escapeHtml(formatDate(d.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })) + '</h2><p class="section-card-subtitle">Daily overview of members and training sessions.</p></div><div class="toolbar-actions"><input id="dashboardDate" type="date" class="form-control" style="width:auto" value="' + escapeHtml(d.date) + '"></div></div>' +
-        '<div class="metrics-grid mb-4"><div class="metric-card"><div class="metric-icon brand">' + icon('users') + '</div><span class="metric-value">' + d.active_members + '</span><span class="metric-label">Active members</span></div><div class="metric-card"><div class="metric-icon success">' + icon('calendar-check') + '</div><span class="metric-value">' + d.bookings + '</span><span class="metric-label">Bookings today</span></div><div class="metric-card"><div class="metric-icon info">' + icon('clock') + '</div><span class="metric-value">' + d.sessions_count + '</span><span class="metric-label">Sessions today</span></div><div class="metric-card"><div class="metric-icon warning">' + icon('activity') + '</div><span class="metric-value">' + (next ? escapeHtml(next.start_time) : '—') + '</span><span class="metric-label">Next open session</span></div></div>' +
-        '<div class="content-grid two-column"><section class="section-card"><div class="section-card-header"><div><h2 class="section-card-title">Today\'s sessions</h2><p class="section-card-subtitle">Live occupancy based on confirmed bookings.</p></div><button class="btn btn-sm btn-soft" type="button" data-route="#/admin/bookings">Manage bookings</button></div>' +
-        (d.sessions.length ? d.sessions.map(function (s) { var pct = s.capacity ? Math.round((s.booked_count / s.capacity) * 100) : 0; return '<div class="dashboard-session-row"><div class="dashboard-session-time">' + escapeHtml(s.start_time) + '</div><div><div class="capacity-row mb-1"><span>' + escapeHtml(s.status) + '</span><span>' + s.available_count + ' available</span></div><div class="capacity-track"><div class="capacity-fill' + (s.booked_count >= s.capacity ? ' full' : '') + '" style="width:' + Math.min(100,pct) + '%"></div></div></div><div class="occupancy-pill">' + s.booked_count + ' / ' + s.capacity + '</div></div>'; }).join('') : emptyState('calendar', 'No sessions today', 'There are no scheduled training sessions for this date.')) + '</section>' +
-        '<aside class="content-grid"><section class="section-card"><h2 class="section-card-title mb-2">Quick actions</h2><div class="d-grid gap-2"><button class="btn btn-brand" type="button" data-admin-new-booking>' + icon('plus') + ' Add booking</button><button class="btn btn-soft" type="button" data-admin-new-user>' + icon('user-plus') + ' Add member</button><button class="btn btn-soft" type="button" data-route="#/admin/announcements">' + icon('megaphone') + ' Post announcement</button><button class="btn btn-soft" type="button" data-route="#/admin/reports">' + icon('activity') + ' Attendance report</button></div></section>' +
-        '<section class="section-card"><div class="d-flex gap-3 align-items-start"><div class="announcement-banner-icon">' + icon('info') + '</div><div><h2 class="section-card-title mb-1">Capacity protection</h2><p class="section-card-subtitle mb-0">The API validates each booking inside a database transaction, so a full session cannot be overbooked by simultaneous requests.</p></div></div></section></aside></div>';
-      $('#pageContent').html(html);
-    } catch (error) {
-      $('#pageContent').html(emptyState('alert-circle', 'Unable to load dashboard', Api.errorMessage(error)));
-    }
-  }
-
-  /* Admin members */
-  async function renderAdminMembers(query) {
-    query = query || { page: 1, per_page: 25 };
-    setPageMeta('Members', 'Administrator');
-    $('#pageContent').html(pageSkeleton());
-    try {
-      var response = await Api.get('/admin/users', query);
-      state.adminUsers = response.data;
-      drawAdminMembers(query);
-    } catch (error) {
-      $('#pageContent').html(emptyState('alert-circle', 'Unable to load members', Api.errorMessage(error)));
-    }
-  }
-
-  function drawAdminMembers(query) {
-    var data = state.adminUsers;
-    var rows = data.items.map(function (u) {
-      var payment = u.role === 'member' ? paymentStatusBadge(u.payment_status) : '<span class="text-muted">—</span>';
-      var paidUntil = u.role === 'member' && u.paid_until ? formatDate(u.paid_until, { day:'numeric', month:'short', year:'numeric' }) : '—';
-      return '<tr><td><div class="d-flex align-items-center gap-2"><span class="avatar avatar-sm">' + escapeHtml(initials(u)) + '</span><div class="min-w-0"><strong class="d-block text-truncate">' + escapeHtml(u.display_name) + '</strong><small class="text-muted">' + escapeHtml(u.email || u.phone || '') + '</small></div></div></td><td><span class="badge-soft-' + (u.role === 'admin' ? 'brand' : 'muted') + ' text-capitalize">' + escapeHtml(u.role) + '</span></td><td><span class="badge-soft-' + (u.status === 'active' ? 'success' : 'danger') + ' text-capitalize">' + escapeHtml(u.status) + '</span></td><td>' + payment + '<div class="small text-muted mt-1">' + escapeHtml(paidUntil) + '</div></td><td class="d-none d-lg-table-cell">' + escapeHtml(u.phone || '—') + '</td><td class="d-none d-xl-table-cell">' + escapeHtml(u.last_login_at ? formatDateTime(u.last_login_at) : t('Never')) + '</td><td><div class="table-actions">' + (u.role === 'member' ? '<button class="btn btn-light table-action-btn" type="button" data-user-payment="' + u.id + '" aria-label="' + t('Edit / record payment') + '">' + icon('credit-card') + '</button>' : '') + '<button class="btn btn-light table-action-btn" type="button" data-user-edit="' + u.id + '" aria-label="' + t('Edit member') + '">' + icon('edit') + '</button></div></td></tr>';
-    }).join('');
-
-    var html = '<div class="page-toolbar"><div><h2 class="section-card-title">Member directory</h2><p class="section-card-subtitle">Create accounts, update contact information, roles and account status.</p></div><button class="btn btn-brand" type="button" data-admin-new-user>' + icon('user-plus') + ' Add member</button></div>' +
-      '<form id="memberFilters" class="filters-card"><div class="filters-grid"><div><label class="form-label">Search</label><input name="search" class="form-control" placeholder="Name, email or phone" value="' + escapeHtml(query.search || '') + '"></div><div><label class="form-label">Role</label><select name="role" class="form-select select2" data-search="false" data-allow-clear="true" data-placeholder="All roles"><option value=""></option><option value="member"' + (query.role === 'member' ? ' selected' : '') + '>Member</option><option value="admin"' + (query.role === 'admin' ? ' selected' : '') + '>Administrator</option></select></div><div><label class="form-label">Status</label><select name="status" class="form-select select2" data-search="false" data-allow-clear="true" data-placeholder="All statuses"><option value=""></option><option value="active"' + (query.status === 'active' ? ' selected' : '') + '>Active</option><option value="inactive"' + (query.status === 'inactive' ? ' selected' : '') + '>Inactive</option></select></div><div class="d-flex align-items-end"><button class="btn btn-dark w-100" type="submit">' + icon('search') + ' Apply filters</button></div></div></form>' +
+print("\n".join(lines[400:800]))
+ear="true" data-placeholder="All statuses"><option value=""></option><option value="active"' + (query.status === 'active' ? ' selected' : '') + '>Active</option><option value="inactive"' + (query.status === 'inactive' ? ' selected' : '') + '>Inactive</option></select></div><div class="d-flex align-items-end"><button class="btn btn-dark w-100" type="submit">' + icon('search') + ' Apply filters</button></div></div></form>' +
       '<div class="table-card"><div class="table-responsive"><table class="table"><thead><tr><th>Member</th><th>Role</th><th>Status</th><th>Payment status</th><th class="d-none d-lg-table-cell">Phone</th><th class="d-none d-xl-table-cell">Last login</th><th class="text-end">Actions</th></tr></thead><tbody>' + (rows || '<tr><td colspan="7">' + emptyState('users','No members found','Try changing the filters.') + '</td></tr>') + '</tbody></table></div>' + paginationHtml(data.pagination, 'users') + '</div>';
     $('#pageContent').html(html);
     initSelect2('#pageContent');
@@ -798,40 +539,14 @@
 
   function drawAdminBookings(query) {
     var data = state.adminBookings;
-    var rows = data.items.map(function (b) {
-      var member = b.member || {};
-      var statusClass = b.status === 'checked_in' ? 'brand' : b.status === 'booked' ? 'success' : b.status === 'no_show' ? 'danger' : 'muted';
-      var attendance = b.status === 'cancelled' ? '' : '<select class="form-select form-select-sm attendance-select" data-admin-attendance-id="' + b.id + '"><option value="booked"' + (b.status === 'booked' ? ' selected' : '') + '>Booked</option><option value="checked_in"' + (b.status === 'checked_in' ? ' selected' : '') + '>Checked in</option><option value="no_show"' + (b.status === 'no_show' ? ' selected' : '') + '>No-show</option></select>';
-      return '<tr><td><strong>' + escapeHtml(member.display_name || ('User #' + b.user_id)) + '</strong><div class="small text-muted">' + escapeHtml(member.email || member.phone || '') + '</div></td><td>' + escapeHtml(formatDate(b.date, { day: 'numeric', month: 'short', weekday: 'short' })) + '</td><td>' + escapeHtml(b.start_time) + (b.end_time ? '–' + escapeHtml(b.end_time) : '') + '</td><td><span class="badge-soft-' + statusClass + ' text-capitalize">' + escapeHtml(b.status.replace('_',' ')) + '</span></td><td>' + attendance + '</td><td class="text-end">' + (b.status !== 'cancelled' ? '<button class="btn btn-light text-danger table-action-btn" data-admin-booking-cancel="' + b.id + '" type="button" aria-label="Cancel booking">' + icon('x') + '</button>' : '') + '</td></tr>';
-    }).join('');
-    var html = '<div class="page-toolbar"><div><h2 class="section-card-title">All bookings</h2><p class="section-card-subtitle">Search reservations and add members to sessions manually.</p></div><button class="btn btn-brand" type="button" data-admin-new-booking>' + icon('plus') + ' Add booking</button></div>' +
-      '<form id="adminBookingFilters" class="filters-card"><div class="filters-grid"><div><label class="form-label">Search</label><input name="search" class="form-control" value="' + escapeHtml(query.search || '') + '" placeholder="Member name, email or phone"></div><div><label class="form-label">From</label><input name="from" type="date" class="form-control" value="' + escapeHtml(query.from || '') + '"></div><div><label class="form-label">To</label><input name="to" type="date" class="form-control" value="' + escapeHtml(query.to || '') + '"></div><div><label class="form-label">Status</label><select name="status" class="form-select select2" data-search="false" data-allow-clear="true" data-placeholder="All statuses"><option value=""></option><option value="booked"' + (query.status === 'booked' ? ' selected' : '') + '>Booked</option><option value="checked_in"' + (query.status === 'checked_in' ? ' selected' : '') + '>Checked in</option><option value="no_show"' + (query.status === 'no_show' ? ' selected' : '') + '>No-show</option><option value="cancelled"' + (query.status === 'cancelled' ? ' selected' : '') + '>Cancelled</option></select></div></div><div class="d-flex justify-content-end mt-3"><button class="btn btn-dark" type="submit">' + icon('search') + ' Apply filters</button></div></form>' +
-      '<div class="table-card mb-4"><div class="table-responsive"><table class="table"><thead><tr><th>Member</th><th>Date</th><th>Time</th><th>Status</th><th>Attendance</th><th></th></tr></thead><tbody>' + (rows || '<tr><td colspan="6">' + emptyState('calendar-check','No bookings found','Try another date range or search term.') + '</td></tr>') + '</tbody></table></div>' + paginationHtml(data.pagination, 'bookings') + '</div>' +
-      adminWaitlistHtml(state.adminWaitlist || []);
-    $('#pageContent').html(html);
-    initSelect2('#pageContent');
-  }
 
-  function adminWaitlistHtml(items) {
-    var positions = {};
-    var rows = items.map(function (entry) {
-      var member = entry.member || {};
-      positions[entry.session_id] = (positions[entry.session_id] || 0) + 1;
-      return '<tr><td><span class="waitlist-position">' + positions[entry.session_id] + '</span></td><td><strong>' + escapeHtml(member.display_name || ('User #' + entry.user_id)) + '</strong><div class="small text-muted">' + escapeHtml(member.email || member.phone || '') + '</div></td><td>' + escapeHtml(formatDate(entry.date, { day: 'numeric', month: 'short', weekday: 'short' })) + '</td><td>' + escapeHtml(entry.start_time) + (entry.end_time ? '–' + escapeHtml(entry.end_time) : '') + '</td><td>' + escapeHtml(formatDateTime(entry.joined_at)) + '</td></tr>';
-    }).join('');
-    return '<section class="section-card"><div class="section-card-header"><div><h2 class="section-card-title">Active waiting list</h2><p class="section-card-subtitle">Members are ordered by session and join time. When auto-promotion is enabled, the oldest eligible member is moved into a booking when a place opens.</p></div><span class="badge rounded-pill text-bg-dark">' + items.length + '</span></div><div class="table-responsive"><table class="table mb-0"><thead><tr><th>#</th><th>Member</th><th>Date</th><th>Time</th><th>Joined</th></tr></thead><tbody>' + (rows || '<tr><td colspan="5">' + emptyState('clock','No one is waiting','There are no active waiting-list entries in this date range.') + '</td></tr>') + '</tbody></table></div></section>';
-  }
+from pathlib import Path
 
-  async function openAdminBookingModal() {
-    showLoader(true);
-    try {
-      var responses = await Promise.all([
-        Api.get('/admin/users', { role: 'member', status: 'active', page: 1, per_page: 100 }),
-        Api.get('/admin/schedule/sessions', { from: todayYmd(), to: addDays(todayYmd(), 60) })
-      ]);
-      var users = responses[0].data.items || [];
-      var sessions = (responses[1].data || []).filter(function (s) { return s.status === 'open' && s.booked_count < s.capacity && isFutureSession(s.date, s.start_time); });
-      var userOptions = users.map(function (u) { return '<option value="' + u.id + '">' + escapeHtml(u.display_name + (u.phone ? ' · ' + u.phone : u.email ? ' · ' + u.email : '')) + '</option>'; }).join('');
+path = Path("/mnt/data/app.full.fixed.js")
+lines = path.read_text(encoding="utf-8").splitlines()
+
+print("\n".join(lines[800:1200]))
+: '')) + '</option>'; }).join('');
       var sessionOptions = sessions.map(function (s) { return '<option value="' + s.id + '">' + escapeHtml(formatDate(s.date, { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' + s.start_time + ' · ' + s.booked_count + '/' + s.capacity) + '</option>'; }).join('');
       openModal('Add booking', 'Administrator', '<form id="adminBookingModalForm"><div class="mb-3"><label class="form-label">Member</label><select name="user_id" class="form-select select2" data-placeholder="Choose a member" required><option value=""></option>' + userOptions + '</select></div><div><label class="form-label">Session</label><select name="session_id" class="form-select select2" data-placeholder="Choose an available session" required><option value=""></option>' + sessionOptions + '</select><div class="form-text">Only future open sessions with remaining capacity are shown.</div></div></form>', '<button class="btn btn-light" data-bs-dismiss="modal" type="button">Cancel</button><button class="btn btn-brand" type="submit" form="adminBookingModalForm"><span class="button-label">Create booking</span><span class="spinner-border spinner-border-sm ms-2 d-none"></span></button>');
       initSelect2('#appModal');
@@ -1198,96 +913,14 @@ async function renderAdminSettings() {
   }
 }
 
-  /* Modal and confirm helpers */
-  function openModal(title, eyebrow, body, footer, sizeClass) {
-    $('#appModalTitle').text(title);
-    $('#appModalEyebrow').text(eyebrow || '');
-    $('#appModalBody').html(body || '');
-    $('#appModalFooter').html(footer || '');
-    $('#appModalDialog').attr('class', 'modal-dialog modal-dialog-centered modal-dialog-scrollable' + (sizeClass ? ' ' + sizeClass : ''));
-    appModal.show();
-    hydrateIcons('#appModal');
-    if (I18n) I18n.apply(document.getElementById('appModal'));
-  }
 
-  function confirmAction(title, message, buttonLabel, danger) {
-    $('#confirmTitle').text(title || 'Are you sure?');
-    $('#confirmMessage').text(message || 'This action cannot be undone.');
-    $('#confirmActionButton').text(buttonLabel || 'Confirm').toggleClass('btn-danger', danger !== false).toggleClass('btn-brand', danger === false);
-    confirmModal.show();
-    return new Promise(function (resolve) { state.confirmResolver = resolve; });
-  }
+from pathlib import Path
 
-  function serializeForm($form) {
-    var result = {};
-    $form.serializeArray().forEach(function (item) { result[item.name] = item.value; });
-    return result;
-  }
+path = Path("/mnt/data/app.full.fixed.js")
+lines = path.read_text(encoding="utf-8").splitlines()
 
-  /* Global events */
-  function generateTemporaryPassword(length) {
-    length = length || 12;
-    var upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-    var lower = 'abcdefghijkmnopqrstuvwxyz';
-    var digits = '23456789';
-    var all = upper + lower + digits;
-    var chars = [upper[Math.floor(Math.random()*upper.length)], lower[Math.floor(Math.random()*lower.length)], digits[Math.floor(Math.random()*digits.length)]];
-    while (chars.length < length) chars.push(all[Math.floor(Math.random()*all.length)]);
-    for (var i = chars.length - 1; i > 0; i -= 1) { var j = Math.floor(Math.random()*(i+1)); var tmp=chars[i]; chars[i]=chars[j]; chars[j]=tmp; }
-    return chars.join('');
-  }
-
-  function bindGlobalEvents() {
-    window.addEventListener('hashchange', route);
-
-    $(document).on('befit:unauthorized', function () {
-      Api.clearSession();
-      state.user = null;
-      toast('Your session has expired. Please sign in again.', 'danger');
-      showLogin();
-    });
-
-    $('#loginForm').on('submit', async function (event) {
-      event.preventDefault();
-      var $button = $('#loginButton');
-      var login = $('#loginInput').val().trim();
-      var password = $('#passwordInput').val();
-      $('#loginError').addClass('d-none').empty();
-      if (!login || !password) {
-        $('#loginError').removeClass('d-none').text('Enter your email/phone and password.');
-        return;
-      }
-      setBusy($button, true, 'Signing in…');
-      try {
-        var response = await Api.post('/auth/login', { login: login, password: password }, { auth: false });
-        Api.setToken(response.data.token);
-        saveUser(response.data.user);
-        $('#passwordInput').val('');
-        window.location.hash = state.user.must_change_password ? '#/profile' : (state.user.role === 'admin' ? '#/admin/dashboard' : '#/schedule');
-        showApp();
-      } catch (error) {
-        $('#loginError').removeClass('d-none').text(Api.errorMessage(error));
-      } finally {
-        setBusy($button, false, 'Sign in');
-      }
-    });
-
-    $(document).on('click', '[data-forgot-password]', openForgotPasswordModal);
-    $(document).on('submit', '#forgotPasswordForm', async function (event) {
-      event.preventDefault();
-      var $form=$(this),$button=$('#appModalFooter button[type=submit]');
-      setBusy($button,true,'Creating…');
-      try {
-        var response=await Api.post('/auth/forgot-password',serializeForm($form),{auth:false});
-        var token=response.data&&response.data.dev_reset_token ? response.data.dev_reset_token : '';
-        if(token){ toast('Local debug reset token created.','success'); showResetPasswordForm(token); }
-        else { appModal.hide(); toast('If the account exists, reset instructions have been sent or created.','success'); }
-      } catch(e){ toast(Api.errorMessage(e),'danger'); }
-      finally{ setBusy($button,false,'Continue'); }
-    });
-    $(document).on('submit', '#resetPasswordForm', async function (event) {
-      event.preventDefault();
-      var $form=$(this),$button=$('#appModalFooter button[type=submit]');
+print("\n".join(lines[1200:]))
+]');
       setBusy($button,true,'Resetting…');
       try { await Api.post('/auth/reset-password',serializeForm($form),{auth:false}); appModal.hide(); window.location.hash=''; toast('Password reset. You can now sign in.','success'); }
       catch(e){ toast(Api.errorMessage(e),'danger'); }
