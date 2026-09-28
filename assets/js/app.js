@@ -912,20 +912,291 @@
   }
 
   /* Admin settings */
-  /* Admin settings */
-  async function renderAdminSettings() {
-    setPageMeta('Settings', 'Administrator');
-    $('#pageContent').html(pageSkeleton());
-    try {
-      var response = await Api.get('/admin/settings');
-      state.settings = response.data;
-      $('#sidebarGymName, #mobileGymName').text(state.settings.gym_name || 'BE-FIT');
-      var s = state.settings;
-      $('#pageContent').html('<div class="content-grid two-column"><section class="section-card"><div class="section-card-header"><div><h2 class="section-card-title">Gym & booking rules</h2><p class="section-card-subtitle">These rules are enforced by the API, not only by the frontend.</p></div></div><form id="settingsForm"><div class="row g-3"><div class="col-12"><label class="form-label">Gym name</label><input name="gym_name" class="form-control" maxlength="180" required value="' + escapeHtml(s.gym_name) + '"></div><div class="col-sm-6"><label class="form-label">Default capacity</label><input name="default_capacity" type="number" min="1" max="100" class="form-control" required value="' + s.default_capacity + '"></div><div class="col-sm-6"><label class="form-label">Booking days ahead</label><input name="booking_days_ahead" type="number" min="0" max="365" class="form-control" value="' + s.booking_days_ahead + '"><div class="form-text">0 = no limit.</div></div><div class="col-sm-6"><label class="form-label">Booking cutoff (minutes)</label><input name="booking_cutoff_minutes" type="number" min="0" class="form-control" value="' + s.booking_cutoff_minutes + '"></div><div class="col-sm-6"><label class="form-label">Cancellation cutoff (minutes)</label><input name="cancellation_cutoff_minutes" type="number" min="0" class="form-control" value="' + s.cancellation_cutoff_minutes + '"></div><div class="col-12"><hr></div><div class="col-12"><div class="form-check form-switch mb-3"><input name="show_attendee_names" class="form-check-input" type="checkbox" id="showNames"' + (s.show_attendee_names ? ' checked' : '') + '><label class="form-check-label" for="showNames">Show attendee names to other members</label><div class="form-text">Recommended off for member privacy. Occupancy counts remain visible.</div></div><div class="form-check form-switch mb-3"><input name="waitlist_enabled" class="form-check-input" type="checkbox" id="waitlistEnabled"' + (s.waitlist_enabled ? ' checked' : '') + '><label class="form-check-label" for="waitlistEnabled">Enable waiting list for full sessions</label></div><div class="form-check form-switch"><input name="auto_promote_waitlist" class="form-check-input" type="checkbox" id="autoPromote"' + (s.auto_promote_waitlist ? ' checked' : '') + '><label class="form-check-label" for="autoPromote">Automatically give cancelled spots to the first waiting member</label></div></div></div><button class="btn btn-brand mt-4" type="submit"><span class="button-label">Save settings</span><span class="spinner-border spinner-border-sm ms-2 d-none"></span></button></form></section><aside class="content-grid"><section class="section-card"><div class="d-flex gap-3"><div class="announcement-banner-icon">' + icon('shield') + '</div><div><h2 class="section-card-title mb-1">Privacy default</h2><p class="section-card-subtitle">Member names are hidden by default. Turn them on only if the gym has decided this is appropriate.</p></div></div></section><section class="section-card"><div class="d-flex gap-3"><div class="announcement-banner-icon">' + icon('clock') + '</div><div><h2 class="section-card-title mb-1">Suggested starting rules</h2><p class="section-card-subtitle mb-0">30 days ahead, booking closes 60 minutes before and cancellation closes 120 minutes before. There is no daily or active-booking quantity limit.</p></div></div></section></aside></div>');
-    } catch (error) {
-      $('#pageContent').html(emptyState('alert-circle','Unable to load settings',Api.errorMessage(error)));
-    }
+async function renderAdminSettings() {
+  setPageMeta('Settings', 'Administrator');
+  $('#pageContent').html(pageSkeleton());
+
+  try {
+    var response = await Api.get('/admin/settings');
+    state.settings = response.data;
+
+    $('#sidebarGymName, #mobileGymName').text(
+      state.settings.gym_name || 'BE-FIT'
+    );
+
+    var s = state.settings;
+
+    var paymentReminderDays =
+      s.payment_reminder_days_before_expiry !== undefined
+        ? s.payment_reminder_days_before_expiry
+        : 5;
+
+    var html =
+      '<div class="content-grid two-column">' +
+
+        /*
+         * Main settings card
+         */
+        '<section class="section-card">' +
+
+          '<div class="section-card-header">' +
+            '<div>' +
+              '<h2 class="section-card-title">Gym & booking rules</h2>' +
+              '<p class="section-card-subtitle">' +
+                'These rules are enforced by the API, not only by the frontend.' +
+              '</p>' +
+            '</div>' +
+          '</div>' +
+
+          '<form id="settingsForm">' +
+
+            '<div class="row g-3">' +
+
+              /*
+               * Gym name
+               */
+              '<div class="col-12">' +
+                '<label class="form-label">Gym name</label>' +
+                '<input ' +
+                  'name="gym_name" ' +
+                  'class="form-control" ' +
+                  'maxlength="180" ' +
+                  'required ' +
+                  'value="' + escapeHtml(s.gym_name) + '"' +
+                '>' +
+              '</div>' +
+
+              /*
+               * Default capacity
+               */
+              '<div class="col-sm-6">' +
+                '<label class="form-label">Default capacity</label>' +
+                '<input ' +
+                  'name="default_capacity" ' +
+                  'type="number" ' +
+                  'min="1" ' +
+                  'max="100" ' +
+                  'class="form-control" ' +
+                  'required ' +
+                  'value="' + s.default_capacity + '"' +
+                '>' +
+              '</div>' +
+
+              /*
+               * Booking days ahead
+               */
+              '<div class="col-sm-6">' +
+                '<label class="form-label">Booking days ahead</label>' +
+                '<input ' +
+                  'name="booking_days_ahead" ' +
+                  'type="number" ' +
+                  'min="0" ' +
+                  'max="365" ' +
+                  'class="form-control" ' +
+                  'value="' + s.booking_days_ahead + '"' +
+                '>' +
+                '<div class="form-text">0 = no limit.</div>' +
+              '</div>' +
+
+              /*
+               * Booking cutoff
+               */
+              '<div class="col-sm-6">' +
+                '<label class="form-label">Booking cutoff (minutes)</label>' +
+                '<input ' +
+                  'name="booking_cutoff_minutes" ' +
+                  'type="number" ' +
+                  'min="0" ' +
+                  'class="form-control" ' +
+                  'value="' + s.booking_cutoff_minutes + '"' +
+                '>' +
+              '</div>' +
+
+              /*
+               * Cancellation cutoff
+               */
+              '<div class="col-sm-6">' +
+                '<label class="form-label">Cancellation cutoff (minutes)</label>' +
+                '<input ' +
+                  'name="cancellation_cutoff_minutes" ' +
+                  'type="number" ' +
+                  'min="0" ' +
+                  'class="form-control" ' +
+                  'value="' + s.cancellation_cutoff_minutes + '"' +
+                '>' +
+              '</div>' +
+
+              /*
+               * Payment reminder
+               */
+              '<div class="col-sm-6">' +
+                '<label class="form-label">' +
+                  'Payment reminder (days before expiry)' +
+                '</label>' +
+
+                '<input ' +
+                  'name="payment_reminder_days_before_expiry" ' +
+                  'type="number" ' +
+                  'min="0" ' +
+                  'max="365" ' +
+                  'class="form-control" ' +
+                  'value="' + paymentReminderDays + '"' +
+                '>' +
+
+                '<div class="form-text">' +
+                  'The reminder is sent this many days before the member\'s ' +
+                  'current membership expires. 0 = on the expiry date.' +
+                '</div>' +
+              '</div>' +
+
+              '<div class="col-12">' +
+                '<hr>' +
+              '</div>' +
+
+              /*
+               * Boolean settings
+               */
+              '<div class="col-12">' +
+
+                /*
+                 * Show attendee names
+                 */
+                '<div class="form-check form-switch mb-3">' +
+                  '<input ' +
+                    'name="show_attendee_names" ' +
+                    'class="form-check-input" ' +
+                    'type="checkbox" ' +
+                    'id="showNames"' +
+                    (s.show_attendee_names ? ' checked' : '') +
+                  '>' +
+
+                  '<label class="form-check-label" for="showNames">' +
+                    'Show attendee names to other members' +
+                  '</label>' +
+
+                  '<div class="form-text">' +
+                    'Recommended off for member privacy. ' +
+                    'Occupancy counts remain visible.' +
+                  '</div>' +
+                '</div>' +
+
+                /*
+                 * Waitlist
+                 */
+                '<div class="form-check form-switch mb-3">' +
+                  '<input ' +
+                    'name="waitlist_enabled" ' +
+                    'class="form-check-input" ' +
+                    'type="checkbox" ' +
+                    'id="waitlistEnabled"' +
+                    (s.waitlist_enabled ? ' checked' : '') +
+                  '>' +
+
+                  '<label class="form-check-label" for="waitlistEnabled">' +
+                    'Enable waiting list for full sessions' +
+                  '</label>' +
+                '</div>' +
+
+                /*
+                 * Auto promote waitlist
+                 */
+                '<div class="form-check form-switch">' +
+                  '<input ' +
+                    'name="auto_promote_waitlist" ' +
+                    'class="form-check-input" ' +
+                    'type="checkbox" ' +
+                    'id="autoPromote"' +
+                    (s.auto_promote_waitlist ? ' checked' : '') +
+                  '>' +
+
+                  '<label class="form-check-label" for="autoPromote">' +
+                    'Automatically give cancelled spots to the first waiting member' +
+                  '</label>' +
+                '</div>' +
+
+              '</div>' +
+
+            '</div>' +
+
+            /*
+             * Save button
+             */
+            '<button class="btn btn-brand mt-4" type="submit">' +
+              '<span class="button-label">Save settings</span>' +
+              '<span class="spinner-border spinner-border-sm ms-2 d-none"></span>' +
+            '</button>' +
+
+          '</form>' +
+
+        '</section>' +
+
+        /*
+         * Right sidebar
+         */
+        '<aside class="content-grid">' +
+
+          /*
+           * Privacy card
+           */
+          '<section class="section-card">' +
+            '<div class="d-flex gap-3">' +
+
+              '<div class="announcement-banner-icon">' +
+                icon('shield') +
+              '</div>' +
+
+              '<div>' +
+                '<h2 class="section-card-title mb-1">Privacy default</h2>' +
+                '<p class="section-card-subtitle">' +
+                  'Member names are hidden by default. ' +
+                  'Turn them on only if the gym has decided this is appropriate.' +
+                '</p>' +
+              '</div>' +
+
+            '</div>' +
+          '</section>' +
+
+          /*
+           * Suggested rules card
+           */
+          '<section class="section-card">' +
+            '<div class="d-flex gap-3">' +
+
+              '<div class="announcement-banner-icon">' +
+                icon('clock') +
+              '</div>' +
+
+              '<div>' +
+                '<h2 class="section-card-title mb-1">' +
+                  'Suggested starting rules' +
+                '</h2>' +
+
+                '<p class="section-card-subtitle mb-0">' +
+                  '30 days ahead, booking closes 60 minutes before and ' +
+                  'cancellation closes 120 minutes before. ' +
+                  'There is no daily or active-booking quantity limit.' +
+                '</p>' +
+              '</div>' +
+
+            '</div>' +
+          '</section>' +
+
+        '</aside>' +
+
+      '</div>';
+
+    $('#pageContent').html(html);
+
+  } catch (error) {
+    $('#pageContent').html(
+      emptyState(
+        'alert-circle',
+        'Unable to load settings',
+        Api.errorMessage(error)
+      )
+    );
   }
+}
 
   /* Modal and confirm helpers */
   function openModal(title, eyebrow, body, footer, sizeClass) {
@@ -1197,9 +1468,74 @@
     $(document).on('submit', '#announcementModalForm', async function(event){event.preventDefault();var $form=$(this),id=Number($form.attr('data-announcement-id'))||null,data=serializeForm($form),$button=$('#appModalFooter button[type=submit]');data.is_active=$form.find('[name=is_active]').is(':checked');if(data.starts_at)data.starts_at=fromInputDateTime(data.starts_at);else delete data.starts_at;if(data.expires_at)data.expires_at=fromInputDateTime(data.expires_at);else data.expires_at=null;setBusy($button,true,'Saving…');try{if(id)await Api.put('/admin/announcements/'+id,data);else await Api.post('/admin/announcements',data);appModal.hide();toast('Announcement saved.','success');renderAdminAnnouncements();}catch(e){toast(Api.errorMessage(e),'danger');}finally{setBusy($button,false,'Save announcement');}});
     $(document).on('click', '[data-announcement-delete]', async function(){var id=Number($(this).attr('data-announcement-delete'));if(!(await confirmAction('Delete announcement?','Members will no longer see this notice.','Delete',true)))return;try{await Api.delete('/admin/announcements/'+id);toast('Announcement deleted.','success');renderAdminAnnouncements();}catch(e){toast(Api.errorMessage(e),'danger');}});
 
-    $(document).on('submit', '#settingsForm', async function(event){event.preventDefault();var $form=$(this),data=serializeForm($form),$button=$form.find('button[type=submit]');['default_capacity','booking_days_ahead','booking_cutoff_minutes','cancellation_cutoff_minutes'].forEach(function(k){data[k]=Number(data[k]);});data.show_attendee_names=$form.find('[name=show_attendee_names]').is(':checked');data.waitlist_enabled=$form.find('[name=waitlist_enabled]').is(':checked');data.auto_promote_waitlist=$form.find('[name=auto_promote_waitlist]').is(':checked');setBusy($button,true,'Saving…');try{var response=await Api.put('/admin/settings',data);state.settings=response.data;$('#sidebarGymName,#mobileGymName').text(state.settings.gym_name);toast('Settings updated.','success');}catch(e){toast(Api.errorMessage(e),'danger');}finally{setBusy($button,false,'Save settings');}});
-  }
+   $(document).on('submit', '#settingsForm', async function (event) {
+  event.preventDefault();
 
+  var $form = $(this);
+  var data = serializeForm($form);
+  var $button = $form.find('button[type=submit]');
+
+  /*
+   * Numeric settings
+   */
+  var numericSettings = [
+    'default_capacity',
+    'booking_days_ahead',
+    'booking_cutoff_minutes',
+    'cancellation_cutoff_minutes',
+    'payment_reminder_days_before_expiry'
+  ];
+
+  numericSettings.forEach(function (key) {
+    data[key] = Number(data[key]);
+  });
+
+  /*
+   * Boolean settings
+   */
+  data.show_attendee_names = $form
+    .find('[name="show_attendee_names"]')
+    .is(':checked');
+
+  data.waitlist_enabled = $form
+    .find('[name="waitlist_enabled"]')
+    .is(':checked');
+
+  data.auto_promote_waitlist = $form
+    .find('[name="auto_promote_waitlist"]')
+    .is(':checked');
+
+  /*
+   * Submit
+   */
+  setBusy($button, true, 'Saving…');
+
+  try {
+    var response = await Api.put('/admin/settings', data);
+
+    state.settings = response.data;
+
+    $('#sidebarGymName, #mobileGymName').text(
+      state.settings.gym_name
+    );
+
+    toast('Settings updated.', 'success');
+
+  } catch (error) {
+    toast(
+      Api.errorMessage(error),
+      'danger'
+    );
+
+  } finally {
+    setBusy(
+      $button,
+      false,
+      'Save settings'
+    );
+  }
+});
+  }
   async function logout() {
     if (!Api.getToken()) { showLogin(); return; }
     showLoader(true);
