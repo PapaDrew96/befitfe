@@ -1,17 +1,29 @@
 (function (window) {
   'use strict';
 
+  var hostname = window.location.hostname.toLowerCase();
   var isHttps = window.location.protocol === 'https:';
-  var localApi = isHttps
-    ? 'https://befitapi.test/api/v1'
-    : 'http://befitapi.test:8082/api/v1';
+
+  var isProduction =
+    hostname === 'app.befittraining.gr' ||
+    hostname === 'befittraining.gr' ||
+    hostname === 'www.befittraining.gr';
+
+  var apiBaseUrl = isProduction
+    ? 'https://api.befittraining.gr/api/v1'
+    : (
+        isHttps
+          ? 'https://befitapi.test/api/v1'
+          : 'http://befitapi.test:8082/api/v1'
+      );
+
   var languageKey = 'befit_language';
   var savedLanguage = (localStorage.getItem(languageKey) || 'en').toLowerCase();
   var language = savedLanguage === 'el' ? 'el' : 'en';
 
   window.BEFIT_CONFIG = Object.freeze({
     APP_NAME: 'BE-FIT Training Center',
-    API_BASE_URL: localApi,
+    API_BASE_URL: apiBaseUrl,
     TOKEN_KEY: 'befit_access_token',
     USER_KEY: 'befit_user',
     LANGUAGE_KEY: languageKey,
