@@ -1,18 +1,18 @@
 'use strict';
 
-const CACHE_NAME = 'befit-shell-v13';
+const CACHE_NAME = 'befit-shell-v14';
 
 const APP_SHELL = [
   './index.html',
-  './manifest.webmanifest?v=13',
-  './assets/css/style.css?v=13',
-  './assets/js/config.js?v=13',
-  './assets/js/i18n.js?v=13',
-  './assets/js/api.js?v=13',
-  './assets/js/app.js?v=13',
-  './assets/img/logo1.png?v=13',
-  './assets/img/icon-192.png?v=13',
-  './assets/img/icon-512.png?v=13'
+  './manifest.webmanifest?v=14',
+  './assets/css/style.css?v=14',
+  './assets/js/config.js?v=14',
+  './assets/js/i18n.js?v=14',
+  './assets/js/api.js?v=14',
+  './assets/js/app.js?v=14',
+  './assets/img/logo1.png?v=14',
+  './assets/img/icon-192.png?v=14',
+  './assets/img/icon-512.png?v=14'
 ];
 
 self.addEventListener('install', event => {
