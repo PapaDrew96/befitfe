@@ -4,7 +4,7 @@
   var config = window.BEFIT_CONFIG || {};
   var DICT = {
   "BE-FIT requires JavaScript to run.": "Το BE-FIT χρειάζεται JavaScript για να λειτουργήσει.",
-  "Book your training time in seconds.": "Κλείσε την ώρα προπόνησής σου σε δευτερόλεπτα.",
+  "Book your training time in seconds.": "Κλείσε την ώρα προπόνησής σου γρήγορα.",
   "See the weekly program, reserve an available place, and keep your schedule organized from your phone.": "Δες το εβδομαδιαίο πρόγραμμα, κράτησε διαθέσιμη θέση και οργάνωσε τις προπονήσεις σου από το κινητό.",
   "MEMBER ACCESS": "ΠΡΟΣΒΑΣΗ ΜΕΛΟΥΣ",
   "Welcome back": "Καλώς ήρθες ξανά",
