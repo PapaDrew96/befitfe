@@ -827,10 +827,26 @@
             var $modal =
               $select.closest('.modal');
 
+            var selectPlaceholder =
+              $select.attr('data-placeholder');
+
+            if (
+              selectPlaceholder &&
+              I18n
+            ) {
+              selectPlaceholder =
+                I18n.t(selectPlaceholder);
+
+              $select.attr(
+                'data-placeholder',
+                selectPlaceholder
+              );
+            }
+
             $select.select2({
               width: '100%',
               placeholder:
-                $select.attr('data-placeholder') ||
+                selectPlaceholder ||
                 undefined,
               allowClear:
                 $select.attr('data-allow-clear') ===
@@ -4017,7 +4033,7 @@
             '<label class="form-label">' +
               'Note' +
             '</label>' +
-            '<textarea name="note" class="form-control" maxlength="500" placeholder="Optional note">' +
+            '<textarea name="note" class="form-control" maxlength="500" placeholder="' + escapeHtml(t('Optional note')) + '">' +
               escapeHtml(
                 editing
                   ? (
@@ -4195,7 +4211,7 @@
           '<label class="form-label">' +
             'Reason' +
           '</label>' +
-          '<textarea name="reason" class="form-control" maxlength="500" placeholder="Holiday, maintenance, etc."></textarea>' +
+          '<textarea name="reason" class="form-control" maxlength="500" placeholder="' + escapeHtml(t('Holiday, maintenance, etc.')) + '"></textarea>' +
         '</div>' +
 
       '</form>',
@@ -4458,7 +4474,7 @@
               escapeHtml(
                 query.search || ''
               ) +
-            '" placeholder="Member name, email or phone">' +
+            '" placeholder="' + escapeHtml(t('Member name, email or phone')) + '">' +
           '</div>' +
 
           '<div>' +
@@ -4852,7 +4868,7 @@
             '<label class="form-label">' +
               'Member' +
             '</label>' +
-            '<select name="user_id" class="form-select select2" data-placeholder="Choose a member" required>' +
+            '<select name="user_id" class="form-select select2" data-placeholder="' + escapeHtml(t('Choose a member')) + '" required>' +
               '<option value=""></option>' +
               userOptions +
             '</select>' +
@@ -4862,7 +4878,7 @@
             '<label class="form-label">' +
               'Session' +
             '</label>' +
-            '<select name="session_id" class="form-select select2" data-placeholder="Choose an available session" required>' +
+            '<select name="session_id" class="form-select select2" data-placeholder="' + escapeHtml(t('Choose an available session')) + '" required>' +
               '<option value=""></option>' +
               sessionOptions +
             '</select>' +
@@ -5704,7 +5720,7 @@
                 '<div class="col-sm-6">' +
 
                   '<label class="form-label">' +
-                    'Payment reminder (days before expiry)' +
+                    t('Payment reminder (days before expiry)') +
                   '</label>' +
 
                   '<input name="payment_reminder_days_before_expiry" type="number" min="0" max="365" class="form-control" value="' +
@@ -5712,7 +5728,7 @@
                   '">' +
 
                   '<div class="form-text">' +
-                    'The reminder is sent this many days before the member\'s current membership expires. 0 = on the expiry date.' +
+                    t('The reminder is sent this many days before the member\'s current membership expires. 0 = on the expiry date.') +
                   '</div>' +
 
                 '</div>' +
