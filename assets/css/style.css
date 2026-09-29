@@ -134,7 +134,7 @@ textarea.form-control { min-height: 112px; }
   border-radius: 10px;
   background: transparent;
   color: var(--muted);
-  display: grid;
+  /* display: grid; */
   place-items: center;
 }
 .password-toggle:hover { background: var(--surface-2); }
