@@ -738,45 +738,117 @@
     }
   }
 
-  function initSelect2(scope) {
-    if (!$.fn.select2) {
-      return;
+  var select2AssetsPromise = null;
+
+  function loadSelect2Assets() {
+    if ($.fn.select2) {
+      return Promise.resolve();
     }
 
-    $(scope || document)
-      .find('select.select2')
-      .each(function () {
-        var $select = $(this);
+    if (select2AssetsPromise) {
+      return select2AssetsPromise;
+    }
 
-        if (
-          $select.hasClass(
-            'select2-hidden-accessible'
-          )
-        ) {
-          $select.select2('destroy');
+    select2AssetsPromise = new Promise(function (resolve, reject) {
+      var cssId = 'befit-select2-css';
+      var scriptId = 'befit-select2-js';
+      var cssUrl = 'https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css';
+      var scriptUrl = 'https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js';
+
+      if (!document.getElementById(cssId)) {
+        var link = document.createElement('link');
+        link.id = cssId;
+        link.rel = 'stylesheet';
+        link.href = cssUrl;
+        document.head.appendChild(link);
+      }
+
+      var existingScript = document.getElementById(scriptId);
+
+      if (existingScript) {
+        if ($.fn.select2) {
+          resolve();
+          return;
         }
 
-        var $modal =
-          $select.closest('.modal');
+        existingScript.addEventListener('load', function () {
+          resolve();
+        }, { once: true });
 
-        $select.select2({
-          width: '100%',
-          placeholder:
-            $select.attr('data-placeholder') ||
-            undefined,
-          allowClear:
-            $select.attr('data-allow-clear') ===
-            'true',
-          minimumResultsForSearch:
-            $select.attr('data-search') ===
-            'false'
-              ? Infinity
-              : 0,
-          dropdownParent:
-            $modal.length
-              ? $modal
-              : $(document.body)
-        });
+        existingScript.addEventListener('error', function () {
+          reject(new Error('Unable to load Select2.'));
+        }, { once: true });
+
+        return;
+      }
+
+      var script = document.createElement('script');
+      script.id = scriptId;
+      script.src = scriptUrl;
+      script.async = true;
+
+      script.addEventListener('load', function () {
+        resolve();
+      }, { once: true });
+
+      script.addEventListener('error', function () {
+        select2AssetsPromise = null;
+        reject(new Error('Unable to load Select2.'));
+      }, { once: true });
+
+      document.head.appendChild(script);
+    });
+
+    return select2AssetsPromise;
+  }
+
+  function initSelect2(scope) {
+    var $scope = $(scope || document);
+
+    if (!$scope.find('select.select2').length) {
+      return Promise.resolve();
+    }
+
+    return loadSelect2Assets()
+      .then(function () {
+        $scope
+          .find('select.select2')
+          .each(function () {
+            var $select = $(this);
+
+            if (
+              $select.hasClass(
+                'select2-hidden-accessible'
+              )
+            ) {
+              $select.select2('destroy');
+            }
+
+            var $modal =
+              $select.closest('.modal');
+
+            $select.select2({
+              width: '100%',
+              placeholder:
+                $select.attr('data-placeholder') ||
+                undefined,
+              allowClear:
+                $select.attr('data-allow-clear') ===
+                'true',
+              minimumResultsForSearch:
+                $select.attr('data-search') ===
+                'false'
+                  ? Infinity
+                  : 0,
+              dropdownParent:
+                $modal.length
+                  ? $modal
+                  : $(document.body)
+            });
+          });
+      })
+      .catch(function () {
+        // Native <select> controls remain fully functional if the CDN is unavailable.
       });
   }
 
@@ -8140,7 +8212,10 @@
         function () {
           navigator.serviceWorker
             .register(
-              './service-worker.js'
+              './service-worker.js',
+              {
+                updateViaCache: 'none'
+              }
             )
             .catch(
               function () {
