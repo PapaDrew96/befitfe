@@ -869,7 +869,7 @@
   }
 
   /* Lazy feature chunks */
-  var APP_ASSET_VERSION = '14';
+  var APP_ASSET_VERSION = '15';
   var featureModules = {
     member: null,
     admin: null
