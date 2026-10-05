@@ -933,7 +933,7 @@ input::placeholder {
 }
 
 .password-toggle {
-  display: grid;
+  /* display: grid; */
   transition: color var(--transition), background-color var(--transition), transform var(--transition);
 }
 
