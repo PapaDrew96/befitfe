@@ -1,18 +1,18 @@
 'use strict';
 
-const CACHE_NAME = 'befit-shell-v15';
+const CACHE_NAME = 'befit-shell-v16';
 
 const APP_SHELL = [
   './index.html',
-  './manifest.webmanifest?v=15',
-  './assets/css/style.css?v=15',
-  './assets/js/config.js?v=15',
-  './assets/js/i18n.js?v=15',
-  './assets/js/api.js?v=15',
-  './assets/js/app.js?v=15',
-  './assets/img/logo1.png?v=15',
-  './assets/img/icon-192.png?v=15',
-  './assets/img/icon-512.png?v=15'
+  './manifest.webmanifest?v=16',
+  './assets/css/style.css?v=16',
+  './assets/js/config.js?v=16',
+  './assets/js/i18n.js?v=16',
+  './assets/js/api.js?v=16',
+  './assets/js/app.js?v=16',
+  './assets/img/logo1.png?v=16',
+  './assets/img/icon-192.png?v=16',
+  './assets/img/icon-512.png?v=16'
 ];
 
 self.addEventListener('install', event => {
@@ -28,13 +28,19 @@ self.addEventListener('activate', event => {
     caches.keys().then(keys =>
       Promise.all(
         keys
-          .filter(key => key !== CACHE_NAME)
+          .filter(key => key.startsWith('befit-shell-') && key !== CACHE_NAME)
           .map(key => caches.delete(key))
       )
     )
   );
 
   self.clients.claim();
+});
+
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('fetch', event => {
@@ -59,7 +65,7 @@ self.addEventListener('fetch', event => {
   // HTML/navigation: network first so deployments are picked up immediately.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: 'no-store' })
         .then(response => {
           if (response && response.ok) {
             const clone = response.clone();

@@ -615,8 +615,24 @@
       showApp();
 
     } catch (error) {
-      Api.clearSession();
+      // Only destroy a stored session when the API actually rejects it.
+      // A temporary mobile/network/server failure must not silently log the user out.
+      if (error && (error.status === 401 || error.status === 403)) {
+        Api.clearSession();
+        state.user = null;
+      }
+
       showLogin();
+
+      if (!error || error.status === 0) {
+        $('#loginError')
+          .removeClass('d-none')
+          .text(t('Unable to reach the server. Check your connection and try again.'));
+      } else if (error.status !== 401 && error.status !== 403) {
+        $('#loginError')
+          .removeClass('d-none')
+          .text(t('The server could not validate your session. Please try again.'));
+      }
 
     } finally {
       showLoader(false);
@@ -869,7 +885,7 @@
   }
 
   /* Lazy feature chunks */
-  var APP_ASSET_VERSION = '15';
+  var APP_ASSET_VERSION = config.BUILD_VERSION || '16';
   var featureModules = {
     member: null,
     admin: null
@@ -1869,6 +1885,11 @@
           true,
           'Signing in…'
         );
+
+        // A login attempt must start from a clean local auth state.
+        // This prevents an expired token/user object from surviving between accounts.
+        Api.clearSession();
+        state.user = null;
 
         try {
           var response =
@@ -3971,6 +3992,20 @@
       'serviceWorker' in
       navigator
     ) {
+      var reloadingForWorker = false;
+
+      navigator.serviceWorker.addEventListener(
+        'controllerchange',
+        function () {
+          if (reloadingForWorker) {
+            return;
+          }
+
+          reloadingForWorker = true;
+          window.location.reload();
+        }
+      );
+
       window.addEventListener(
         'load',
         function () {
@@ -3981,6 +4016,41 @@
                 updateViaCache: 'none'
               }
             )
+            .then(function (registration) {
+              // Check for a newer worker on every real application load.
+              registration.update().catch(function () {});
+
+              if (registration.waiting) {
+                registration.waiting.postMessage({
+                  type: 'SKIP_WAITING'
+                });
+              }
+
+              registration.addEventListener(
+                'updatefound',
+                function () {
+                  var worker = registration.installing;
+
+                  if (!worker) {
+                    return;
+                  }
+
+                  worker.addEventListener(
+                    'statechange',
+                    function () {
+                      if (
+                        worker.state === 'installed' &&
+                        navigator.serviceWorker.controller
+                      ) {
+                        worker.postMessage({
+                          type: 'SKIP_WAITING'
+                        });
+                      }
+                    }
+                  );
+                }
+              );
+            })
             .catch(
               function () {
                 /* HTTP .test local development may not support service workers */

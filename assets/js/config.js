@@ -23,6 +23,7 @@
 
   window.BEFIT_CONFIG = Object.freeze({
     APP_NAME: 'BE-FIT Training Center',
+    BUILD_VERSION: '16',
     API_BASE_URL: apiBaseUrl,
     TOKEN_KEY: 'befit_access_token',
     USER_KEY: 'befit_user',

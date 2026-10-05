@@ -29,7 +29,8 @@
       status: xhr ? xhr.status : 0,
       message: message,
       details: details,
-      payload: payload
+      payload: payload,
+      requestId: xhr && xhr.getResponseHeader ? (xhr.getResponseHeader('X-Request-ID') || '') : ''
     };
   }
 
@@ -64,6 +65,8 @@
       }
 
       if (method === 'GET') {
+        // API GET responses must never come from a stale browser cache.
+        ajaxOptions.cache = false;
         ajaxOptions.data = data || {};
       } else if (data !== undefined) {
         ajaxOptions.contentType = 'application/json; charset=utf-8';
@@ -77,6 +80,16 @@
           })
           .fail(function (xhr) {
             var error = parseError(xhr);
+
+            if (window.console && console.warn) {
+              console.warn('[BE-FIT API]', {
+                status: error.status,
+                requestId: error.requestId,
+                path: path,
+                message: error.message
+              });
+            }
+
             if (error.status === 401 && options.auth !== false) {
               $(document).trigger('befit:unauthorized', [error]);
             }
@@ -102,6 +115,7 @@
     },
     errorMessage: function (error) {
       if (!error) return I18n ? I18n.t('Something went wrong.') : 'Something went wrong.';
+      if (error.status === 0) return I18n ? I18n.t('Unable to reach the server. Check your connection and try again.') : 'Unable to reach the server. Check your connection and try again.';
       var parts = [error.message || (I18n ? I18n.t('Something went wrong.') : 'Something went wrong.')];
       if (error.details && error.details.length) {
         parts.push(error.details.join(' '));
