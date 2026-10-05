@@ -885,7 +885,7 @@
   }
 
   /* Lazy feature chunks */
-  var APP_ASSET_VERSION = config.BUILD_VERSION || '16';
+  var APP_ASSET_VERSION = config.BUILD_VERSION || '17';
   var featureModules = {
     member: null,
     admin: null
@@ -3988,6 +3988,14 @@
   }
 
   function registerPwa() {
+    // Capacitor already provides the native app container. Do not run the
+    // browser PWA/service-worker lifecycle inside the native WebView.
+    if (config.IS_NATIVE) {
+      state.deferredInstallPrompt = null;
+      $('#installAppButton, #profileInstallButton').addClass('d-none');
+      return;
+    }
+
     if (
       'serviceWorker' in
       navigator
@@ -4095,6 +4103,10 @@
   }
 
   async function installPwa() {
+    if (config.IS_NATIVE) {
+      return;
+    }
+
     if (
       !state.deferredInstallPrompt
     ) {

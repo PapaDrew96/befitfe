@@ -4,12 +4,29 @@
   var hostname = window.location.hostname.toLowerCase();
   var isHttps = window.location.protocol === 'https:';
 
+  // Capacitor injects window.Capacitor inside the native WebView.
+  // Keep web/PWA and native builds on the same frontend codebase.
+  var capacitor = window.Capacitor || null;
+  var isNative = !!(
+    capacitor &&
+    typeof capacitor.isNativePlatform === 'function' &&
+    capacitor.isNativePlatform()
+  );
+  var platform = isNative && typeof capacitor.getPlatform === 'function'
+    ? capacitor.getPlatform()
+    : 'web';
+
+  document.documentElement.classList.toggle('is-native', isNative);
+  document.documentElement.setAttribute('data-platform', platform);
+
   var isProduction =
     hostname === 'app.befittraining.gr' ||
     hostname === 'befittraining.gr' ||
     hostname === 'www.befittraining.gr';
 
-  var apiBaseUrl = isProduction
+  // Native bundles run from a localhost/capacitor origin, so hostname alone
+  // cannot be used to decide whether the production API should be used.
+  var apiBaseUrl = (isProduction || isNative)
     ? 'https://api.befittraining.gr/api/v1'
     : (
         isHttps
@@ -23,7 +40,9 @@
 
   window.BEFIT_CONFIG = Object.freeze({
     APP_NAME: 'BE-FIT Training Center',
-    BUILD_VERSION: '16',
+    BUILD_VERSION: '17',
+    IS_NATIVE: isNative,
+    PLATFORM: platform,
     API_BASE_URL: apiBaseUrl,
     TOKEN_KEY: 'befit_access_token',
     USER_KEY: 'befit_user',
