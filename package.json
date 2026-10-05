@@ -1,0 +1,21 @@
+{
+  "name": "befit-frontend",
+  "version": "1.0.0",
+  "description": "This package includes Phases 1–5. Phase 5 splits the large application JavaScript into a shared core plus lazy member/admin feature chunks.",
+  "main": "service-worker.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:native": "node scripts/build-native.mjs",
+    "cap:sync": "npm run build:native && npx cap sync"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2"
+  }
+}
