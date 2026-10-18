@@ -49,6 +49,7 @@
     'check-circle': '<circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/>',
     'alert-circle': '<circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/>',
     'info': '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+    'help-circle': '<circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.5 2.5 0 1 1 4.2 1.8c-.9.8-1.9 1.2-1.9 2.7M12 17h.01"/>',
     'search': '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
     'filter': '<path d="M4 5h16M7 12h10M10 19h4"/>',
     'log-out': '<path d="M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/>',
@@ -338,6 +339,11 @@
         route: '#/profile',
         label: 'Profile',
         icon: 'user'
+      },
+      {
+        route: '#/help',
+        label: 'Help',
+        icon: 'help-circle'
       }
     ];
   }
@@ -394,6 +400,11 @@
         route: '#/profile',
         label: 'My profile',
         icon: 'user'
+      },
+      {
+        route: '#/help',
+        label: 'Help',
+        icon: 'help-circle'
       }
     ];
   }
@@ -713,6 +724,9 @@
       case '#/profile':
         return renderProfilePage();
 
+      case '#/help':
+        return renderHelpPage();
+
       case '#/admin/dashboard':
         return renderAdminDashboard();
 
@@ -1020,6 +1034,7 @@
   function renderMyBookings() { return callFeature('member', 'renderMyBookings', []); }
   function renderMyPayments() { return callFeature('member', 'renderMyPayments', []); }
   function renderAnnouncementsPage() { return callFeature('member', 'renderAnnouncementsPage', []); }
+  function renderHelpPage() { return callFeature('help', 'renderHelpPage', []); }
 
   function renderAdminDashboard(date) { return callFeature('admin', 'renderAdminDashboard', [date]); }
   function renderAdminMembers(query) { return callFeature('admin', 'renderAdminMembers', [query]); }

@@ -1969,3 +1969,65 @@ input:-webkit-autofill:focus {
     width: 100%;
   }
 }
+
+/* Help ---------------------------------------------------- */
+.help-page { display: grid; gap: 18px; }
+.help-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 24px;
+  color: #fff;
+  background: linear-gradient(145deg, #25292f, #16191d);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+.help-hero-icon,
+.help-contact-icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+}
+.help-hero-icon {
+  width: 54px;
+  height: 54px;
+  color: #fff;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+}
+.help-hero-icon svg { width: 26px; height: 26px; }
+.help-hero h2 { margin: 0 0 8px; font-size: 1.35rem; font-weight: 850; }
+.help-hero p:not(.eyebrow) { max-width: 760px; margin: 0; color: rgba(255,255,255,.72); line-height: 1.65; }
+.help-hero-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.help-rules-loading { display: flex; align-items: center; gap: 10px; min-height: 72px; color: var(--muted); }
+.help-rules-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+.help-rule-item { min-width: 0; padding: 15px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; }
+.help-rule-item strong { display: block; margin: 5px 0 6px; color: var(--ink); font-size: 1.02rem; font-weight: 850; }
+.help-rule-item p { margin: 0; color: var(--muted); font-size: .8rem; line-height: 1.55; }
+.help-rule-label { color: var(--muted); font-size: .7rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.help-guide-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 18px; }
+.help-guide-card { height: 100%; }
+.help-guide-heading { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.help-guide-number { flex: 0 0 auto; width: 34px; height: 34px; display: grid; place-items: center; color: var(--brand-700); background: var(--brand-100); border-radius: 11px; font-size: .78rem; font-weight: 900; }
+.help-step-list { display: grid; gap: 9px; margin: 0; padding-left: 1.25rem; color: var(--ink-2); font-size: .86rem; line-height: 1.55; }
+.help-step-list li::marker { color: var(--brand); font-weight: 800; }
+.help-contact-card { display: flex; align-items: flex-start; gap: 12px; }
+.help-contact-icon { width: 40px; height: 40px; color: var(--brand-700); background: var(--brand-100); border-radius: 12px; }
+.help-contact-icon svg { width: 20px; height: 20px; }
+
+@media (max-width: 991.98px) {
+  .help-rules-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+
+@media (max-width: 767.98px) {
+  .help-guide-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 575.98px) {
+  .help-hero { padding: 20px 18px; gap: 14px; }
+  .help-hero-icon { width: 46px; height: 46px; border-radius: 14px; }
+  .help-hero h2 { font-size: 1.18rem; }
+  .help-hero-actions { display: grid; grid-template-columns: 1fr; }
+  .help-rules-grid { grid-template-columns: 1fr; }
+}
