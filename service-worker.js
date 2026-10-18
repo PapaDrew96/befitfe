@@ -1,11 +1,14 @@
 'use strict';
 
-const CACHE_NAME = 'befit-shell-v19';
+const CACHE_NAME = 'befit-shell-v20';
 
 const APP_SHELL = [
   './index.html',
   './manifest.webmanifest?v=19',
   './assets/css/style.css?v=19',
+  './assets/vendor/bootstrap/css/bootstrap.min.css?v=20',
+  './assets/vendor/jquery/jquery.min.js?v=20',
+  './assets/vendor/bootstrap/js/bootstrap.bundle.min.js?v=20',
   './assets/js/config.js?v=19',
   './assets/js/i18n.js?v=19',
   './assets/js/api.js?v=19',
