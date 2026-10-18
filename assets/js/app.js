@@ -2629,6 +2629,68 @@
 
     $(document).on(
       'click',
+      '[data-members-reset]',
+      function () {
+        renderAdminMembers({
+          page: 1,
+          per_page: 25,
+          sort_by: 'last_name',
+          sort_dir: 'asc'
+        });
+      }
+    );
+
+    $(document).on(
+      'click',
+      '[data-member-toggle]',
+      function () {
+        var $button =
+          $(this);
+
+        var id =
+          $button.attr(
+            'data-member-toggle'
+          );
+
+        var opening =
+          $button.attr(
+            'aria-expanded'
+          ) !== 'true';
+
+        var $details =
+          $('[data-member-details="' +
+            id +
+          '"]');
+
+        $button
+          .attr(
+            'aria-expanded',
+            opening
+              ? 'true'
+              : 'false'
+          )
+          .attr(
+            'aria-label',
+            t(
+              opening
+                ? 'Hide details'
+                : 'Details'
+            )
+          )
+          .toggleClass(
+            'is-open',
+            opening
+          );
+
+        $details.toggleClass(
+          'd-none',
+          !opening
+        );
+      }
+    );
+
+    $(document).on(
+      'click',
       '[data-page-scope="users"]',
       function () {
         var query =
@@ -2803,6 +2865,10 @@
           data.phone = null;
         }
 
+        if (!data.membership_deal) {
+          data.membership_deal = null;
+        }
+
         if (
           id &&
           !data.password
@@ -2853,10 +2919,17 @@
             state.route ===
             '#/admin/members'
           ) {
-            renderAdminMembers({
-              page: 1,
-              per_page: 25
-            });
+            var memberQuery =
+              serializeForm(
+                $('#memberFilters')
+              );
+
+            memberQuery.page = 1;
+            memberQuery.per_page = 25;
+
+            renderAdminMembers(
+              memberQuery
+            );
 
           } else if (
             state.route ===

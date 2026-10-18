@@ -448,6 +448,110 @@ html.is-native .mobile-drawer .offcanvas-body {
 .pagination-wrap { padding: 12px 14px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: .76rem; }
 .pagination-buttons { display: flex; gap: 6px; }
 
+
+/* Admin members */
+.member-filter-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-self: end;
+}
+.member-filter-actions .btn { width: 100%; min-height: 44px; }
+.member-mobile-section { min-width: 0; }
+.member-mobile-list { display: grid; gap: 10px; }
+.member-mobile-card {
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+.member-mobile-summary {
+  width: 100%;
+  min-width: 0;
+  padding: 13px 14px;
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto;
+  align-items: center;
+  gap: 11px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+.member-mobile-summary:focus-visible {
+  outline: 3px solid rgba(219,87,38,.20);
+  outline-offset: -3px;
+}
+.member-mobile-identity { display: block; min-width: 0; }
+.member-mobile-identity strong,
+.member-mobile-identity small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.member-mobile-identity strong { font-size: .86rem; font-weight: 850; }
+.member-mobile-identity small { margin-top: 2px; color: var(--muted); font-size: .7rem; }
+.member-mobile-toggle-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.member-mobile-toggle-icon svg {
+  width: 17px;
+  height: 17px;
+  transition: transform var(--transition);
+}
+.member-mobile-summary.is-open .member-mobile-toggle-icon svg { transform: rotate(180deg); }
+.member-mobile-details {
+  padding: 0 14px 14px;
+  border-top: 1px solid var(--border);
+}
+.member-mobile-detail-row {
+  min-height: 43px;
+  padding: 10px 0;
+  display: grid;
+  grid-template-columns: minmax(92px,.8fr) minmax(0,1.2fr);
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.member-mobile-detail-row > span {
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+.member-mobile-detail-value {
+  min-width: 0;
+  text-align: right;
+  font-size: .76rem;
+  overflow-wrap: anywhere;
+}
+.member-mobile-deal { color: var(--brand-700); font-weight: 800; }
+.member-mobile-actions {
+  padding-top: 13px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 8px;
+}
+.member-mobile-actions .btn:only-child { grid-column: 1 / -1; }
+
+@media (min-width: 1200px) {
+  .member-filters-grid {
+    grid-template-columns: minmax(220px,1.45fr) repeat(4,minmax(135px,1fr)) minmax(230px,1.25fr);
+  }
+}
+
 /* Admin schedule */
 .admin-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 4px; background: var(--surface-3); border-radius: 14px; scrollbar-width: none; }
 .admin-tabs::-webkit-scrollbar { display: none; }
@@ -641,6 +745,7 @@ html.is-native .mobile-drawer .offcanvas-body {
   .toolbar-actions { display: flex; flex-wrap: wrap; gap: 8px; }
   .toolbar-actions .form-control, .toolbar-actions .form-select, .toolbar-actions .btn { flex: 1 1 160px; width: 100% !important; }
   .filters-grid { grid-template-columns: 1fr !important; }
+  .member-filter-actions { grid-template-columns: 1fr 1fr; }
   .admin-tabs { overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; }
   .admin-tab { white-space: nowrap; flex: 0 0 auto; }
   .session-actions { width: 100%; }
@@ -674,6 +779,7 @@ html.is-native .mobile-drawer .offcanvas-body {
   .header-actions #installAppButton { padding-inline: 10px; }
   .mobile-bottom-nav { overflow-x: hidden; }
   .mobile-nav-link { min-width: 0; padding-inline: 2px; font-size: .58rem; }
+  .member-filter-actions { grid-template-columns: 1fr; }
   .password-generator-group { display: grid; grid-template-columns: 1fr 1fr; }
   .password-generator-group .form-control { grid-column: 1 / -1; width: 100%; border-radius: 12px !important; margin-bottom: 8px; }
   .password-generator-group .btn { width: 100%; border-radius: 12px !important; }

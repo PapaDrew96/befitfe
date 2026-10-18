@@ -335,10 +335,28 @@
   /* Admin members */
   async function renderAdminMembers(query) {
     query =
-      query || {
-        page: 1,
-        per_page: 25
-      };
+      query || {};
+
+    query.page =
+      Number(
+        query.page ||
+        1
+      );
+
+    query.per_page =
+      Number(
+        query.per_page ||
+        25
+      );
+
+    query.sort_by =
+      query.sort_by ||
+      'last_name';
+
+    query.sort_dir =
+      query.sort_dir === 'desc'
+        ? 'desc'
+        : 'asc';
 
     setPageMeta(
       'Members',
@@ -375,6 +393,15 @@
   function drawAdminMembers(query) {
     var data =
       state.adminUsers;
+
+    var sortBy =
+      query.sort_by ||
+      'last_name';
+
+    var sortDir =
+      query.sort_dir === 'desc'
+        ? 'desc'
+        : 'asc';
 
     var rows =
       data.items.map(
@@ -517,6 +544,183 @@
         }
       ).join('');
 
+    var mobileItems =
+      data.items.map(
+        function (u) {
+          var payment =
+            u.role === 'member'
+              ? paymentStatusBadge(
+                  u.payment_status
+                )
+              : '<span class="text-muted">—</span>';
+
+          var paidUntil =
+            u.role === 'member' &&
+            u.paid_until
+              ? formatDate(
+                  u.paid_until,
+                  {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                  }
+                )
+              : '—';
+
+          var deal =
+            u.role === 'member' &&
+            u.membership_deal
+              ? u.membership_deal
+              : '—';
+
+          return '' +
+            '<article class="member-mobile-card">' +
+
+              '<button class="member-mobile-summary" type="button" data-member-toggle="' +
+                u.id +
+              '" aria-expanded="false" aria-label="' +
+                t('Details') +
+              '">' +
+
+                '<span class="avatar avatar-sm">' +
+                  escapeHtml(
+                    initials(u)
+                  ) +
+                '</span>' +
+
+                '<span class="member-mobile-identity">' +
+                  '<strong>' +
+                    escapeHtml(
+                      u.display_name
+                    ) +
+                  '</strong>' +
+                  '<small>' +
+                    escapeHtml(
+                      u.email ||
+                      u.phone ||
+                      ''
+                    ) +
+                  '</small>' +
+                '</span>' +
+
+                '<span class="member-mobile-toggle-icon" aria-hidden="true">' +
+                  icon('chevron-down') +
+                '</span>' +
+
+              '</button>' +
+
+              '<div class="member-mobile-details d-none" data-member-details="' +
+                u.id +
+              '">' +
+
+                '<div class="member-mobile-detail-row">' +
+                  '<span>Role</span>' +
+                  '<div class="member-mobile-detail-value">' +
+                    '<span class="badge-soft-' +
+                      (
+                        u.role === 'admin'
+                          ? 'brand'
+                          : 'muted'
+                      ) +
+                    ' text-capitalize">' +
+                      escapeHtml(
+                        u.role
+                      ) +
+                    '</span>' +
+                  '</div>' +
+                '</div>' +
+
+                '<div class="member-mobile-detail-row">' +
+                  '<span>Status</span>' +
+                  '<div class="member-mobile-detail-value">' +
+                    '<span class="badge-soft-' +
+                      (
+                        u.status === 'active'
+                          ? 'success'
+                          : 'danger'
+                      ) +
+                    ' text-capitalize">' +
+                      escapeHtml(
+                        u.status
+                      ) +
+                    '</span>' +
+                  '</div>' +
+                '</div>' +
+
+                '<div class="member-mobile-detail-row">' +
+                  '<span>Member deal</span>' +
+                  '<div class="member-mobile-detail-value member-mobile-deal">' +
+                    escapeHtml(
+                      deal
+                    ) +
+                  '</div>' +
+                '</div>' +
+
+                '<div class="member-mobile-detail-row">' +
+                  '<span>Payment status</span>' +
+                  '<div class="member-mobile-detail-value">' +
+                    payment +
+                    '<small class="d-block text-muted mt-1">' +
+                      escapeHtml(
+                        paidUntil
+                      ) +
+                    '</small>' +
+                  '</div>' +
+                '</div>' +
+
+                '<div class="member-mobile-detail-row">' +
+                  '<span>Phone</span>' +
+                  '<div class="member-mobile-detail-value">' +
+                    escapeHtml(
+                      u.phone || '—'
+                    ) +
+                  '</div>' +
+                '</div>' +
+
+                '<div class="member-mobile-detail-row">' +
+                  '<span>Last login</span>' +
+                  '<div class="member-mobile-detail-value">' +
+                    escapeHtml(
+                      u.last_login_at
+                        ? formatDateTime(
+                            u.last_login_at
+                          )
+                        : t('Never')
+                    ) +
+                  '</div>' +
+                '</div>' +
+
+                '<div class="member-mobile-actions">' +
+                  (
+                    u.role === 'member'
+                      ? '<button class="btn btn-soft btn-sm" type="button" data-user-payment="' +
+                          u.id +
+                        '">' +
+                          icon('credit-card') +
+                          ' Payment' +
+                        '</button>'
+                      : ''
+                  ) +
+                  '<button class="btn btn-light btn-sm" type="button" data-user-edit="' +
+                    u.id +
+                  '">' +
+                    icon('edit') +
+                    ' Edit' +
+                  '</button>' +
+                '</div>' +
+
+              '</div>' +
+
+            '</article>';
+        }
+      ).join('');
+
+    var pagination =
+      paginationHtml(
+        data.pagination,
+        'users'
+      );
+
     var html =
       '<div class="page-toolbar">' +
 
@@ -540,7 +744,7 @@
 
       '<form id="memberFilters" class="filters-card">' +
 
-        '<div class="filters-grid">' +
+        '<div class="filters-grid member-filters-grid">' +
 
           '<div>' +
             '<label class="form-label">' +
@@ -599,10 +803,65 @@
             '</select>' +
           '</div>' +
 
-          '<div class="d-flex align-items-end">' +
-            '<button class="btn btn-dark w-100" type="submit">' +
+          '<div>' +
+            '<label class="form-label">' +
+              'Sort by' +
+            '</label>' +
+            '<select name="sort_by" class="form-select select2" data-search="false">' +
+              '<option value="first_name"' +
+                (
+                  sortBy === 'first_name'
+                    ? ' selected'
+                    : ''
+                ) +
+              '>First name</option>' +
+              '<option value="last_name"' +
+                (
+                  sortBy === 'last_name'
+                    ? ' selected'
+                    : ''
+                ) +
+              '>Last name</option>' +
+              '<option value="email"' +
+                (
+                  sortBy === 'email'
+                    ? ' selected'
+                    : ''
+                ) +
+              '>Email</option>' +
+            '</select>' +
+          '</div>' +
+
+          '<div>' +
+            '<label class="form-label">' +
+              'Order' +
+            '</label>' +
+            '<select name="sort_dir" class="form-select select2" data-search="false">' +
+              '<option value="asc"' +
+                (
+                  sortDir === 'asc'
+                    ? ' selected'
+                    : ''
+                ) +
+              '>A → Z</option>' +
+              '<option value="desc"' +
+                (
+                  sortDir === 'desc'
+                    ? ' selected'
+                    : ''
+                ) +
+              '>Z → A</option>' +
+            '</select>' +
+          '</div>' +
+
+          '<div class="member-filter-actions">' +
+            '<button class="btn btn-dark" type="submit">' +
               icon('search') +
               ' Apply filters' +
+            '</button>' +
+            '<button class="btn btn-light" type="button" data-members-reset>' +
+              icon('users') +
+              ' All members' +
             '</button>' +
           '</div>' +
 
@@ -610,7 +869,7 @@
 
       '</form>' +
 
-      '<div class="table-card">' +
+      '<div class="table-card member-desktop-table d-none d-md-block">' +
 
         '<div class="table-responsive">' +
 
@@ -647,11 +906,23 @@
 
         '</div>' +
 
-        paginationHtml(
-          data.pagination,
-          'users'
-        ) +
+        pagination +
 
+      '</div>' +
+
+      '<div class="member-mobile-section d-md-none">' +
+        (
+          mobileItems
+            ? '<div class="member-mobile-list">' +
+                mobileItems +
+              '</div>'
+            : emptyState(
+                'users',
+                'No members found',
+                'Try changing the filters.'
+              )
+        ) +
+        pagination +
       '</div>';
 
     $('#pageContent').html(html);
@@ -775,10 +1046,13 @@
             '<label class="form-label">' +
               'First name' +
             '</label>' +
-            '<input name="first_name" class="form-control" required value="' +
+            '<input name="first_name" class="form-control" value="' +
               escapeHtml(
                 editing
-                  ? user.first_name
+                  ? (
+                      user.first_name ||
+                      ''
+                    )
                   : ''
               ) +
             '">' +
@@ -788,10 +1062,13 @@
             '<label class="form-label">' +
               'Last name' +
             '</label>' +
-            '<input name="last_name" class="form-control" required value="' +
+            '<input name="last_name" class="form-control" value="' +
               escapeHtml(
                 editing
-                  ? user.last_name
+                  ? (
+                      user.last_name ||
+                      ''
+                    )
                   : ''
               ) +
             '">' +
@@ -827,6 +1104,25 @@
                   : ''
               ) +
             '">' +
+          '</div>' +
+
+          '<div class="col-12">' +
+            '<label class="form-label">' +
+              'Member deal' +
+            '</label>' +
+            '<input name="membership_deal" class="form-control" maxlength="190" placeholder="e.g. 80€ / month or 10€ / visit" value="' +
+              escapeHtml(
+                editing
+                  ? (
+                      user.membership_deal ||
+                      ''
+                    )
+                  : ''
+              ) +
+            '">' +
+            '<div class="form-text">' +
+              'Optional agreement recorded by the administrator for this member.' +
+            '</div>' +
           '</div>' +
 
           '<div class="col-sm-6">' +
