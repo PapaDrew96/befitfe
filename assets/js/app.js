@@ -1395,9 +1395,10 @@
 
               '<button id="profileInstallButton" class="btn btn-soft w-100 mb-2' +
                 (
-                  state.deferredInstallPrompt
-                    ? ''
-                    : ' d-none'
+                  config.IS_NATIVE ||
+                  isStandalonePwa()
+                    ? ' d-none'
+                    : ''
                 ) +
               '" type="button">' +
                 icon('download') +
@@ -4075,13 +4076,73 @@
     }
   }
 
+  function isIosDevice() {
+    var userAgent =
+      navigator.userAgent ||
+      '';
+
+    return (
+      /iPad|iPhone|iPod/.test(
+        userAgent
+      ) ||
+      (
+        navigator.platform === 'MacIntel' &&
+        navigator.maxTouchPoints > 1
+      )
+    );
+  }
+
+  function isStandalonePwa() {
+    return !!(
+      (
+        window.matchMedia &&
+        window.matchMedia(
+          '(display-mode: standalone)'
+        ).matches
+      ) ||
+      window.navigator.standalone === true
+    );
+  }
+
+  function refreshInstallButtons() {
+    var shouldHide =
+      config.IS_NATIVE ||
+      isStandalonePwa();
+
+    $('#installAppButton, #profileInstallButton')
+      .toggleClass(
+        'd-none',
+        shouldHide
+      );
+  }
+
   function registerPwa() {
-    // Capacitor already provides the native app container. Do not run the
-    // browser PWA/service-worker lifecycle inside the native WebView.
     if (config.IS_NATIVE) {
-      state.deferredInstallPrompt = null;
-      $('#installAppButton, #profileInstallButton').addClass('d-none');
+      state.deferredInstallPrompt =
+        null;
+
+      refreshInstallButtons();
       return;
+    }
+
+    refreshInstallButtons();
+
+    if (
+      window.matchMedia
+    ) {
+      var displayModeQuery =
+        window.matchMedia(
+          '(display-mode: standalone)'
+        );
+
+      if (
+        displayModeQuery.addEventListener
+      ) {
+        displayModeQuery.addEventListener(
+          'change',
+          refreshInstallButtons
+        );
+      }
     }
 
     if (
@@ -4113,7 +4174,6 @@
               }
             )
             .then(function (registration) {
-              // Check for a newer worker on every real application load.
               registration.update().catch(function () {});
 
               if (registration.waiting) {
@@ -4125,7 +4185,8 @@
               registration.addEventListener(
                 'updatefound',
                 function () {
-                  var worker = registration.installing;
+                  var worker =
+                    registration.installing;
 
                   if (!worker) {
                     return;
@@ -4164,10 +4225,7 @@
         state.deferredInstallPrompt =
           event;
 
-        $('#installAppButton, #profileInstallButton')
-          .removeClass(
-            'd-none'
-          );
+        refreshInstallButtons();
       }
     );
 
@@ -4196,27 +4254,95 @@
     }
 
     if (
-      !state.deferredInstallPrompt
+      isStandalonePwa()
     ) {
       toast(
-        'Installation becomes available when the app is served over HTTPS and your browser supports PWA installation.',
+        'BE-FIT is already installed on this device.',
         'info'
       );
 
       return;
     }
 
-    state.deferredInstallPrompt.prompt();
+    if (
+      state.deferredInstallPrompt
+    ) {
+      var promptEvent =
+        state.deferredInstallPrompt;
 
-    await state.deferredInstallPrompt.userChoice;
+      promptEvent.prompt();
 
-    state.deferredInstallPrompt =
-      null;
+      var choice =
+        await promptEvent.userChoice;
 
-    $('#installAppButton, #profileInstallButton')
-      .addClass(
-        'd-none'
+      state.deferredInstallPrompt =
+        null;
+
+      if (
+        choice &&
+        choice.outcome === 'accepted'
+      ) {
+        $('#installAppButton, #profileInstallButton')
+          .addClass(
+            'd-none'
+          );
+      }
+
+      return;
+    }
+
+    if (
+      isIosDevice()
+    ) {
+      openModal(
+        'Install BE-FIT',
+        'iPhone / iPad',
+        '<p class="mb-3">' +
+          escapeHtml(
+            t('To install BE-FIT on this device:')
+          ) +
+        '</p>' +
+        '<ol class="mb-0 ps-3">' +
+          '<li class="mb-2">' +
+            escapeHtml(
+              t('Open BE-FIT in Safari.')
+            ) +
+          '</li>' +
+          '<li class="mb-2">' +
+            escapeHtml(
+              t('Tap the Share button.')
+            ) +
+          '</li>' +
+          '<li>' +
+            escapeHtml(
+              t('Choose Add to Home Screen, then tap Add.')
+            ) +
+          '</li>' +
+        '</ol>',
+        '<button class="btn btn-brand" data-bs-dismiss="modal" type="button">' +
+          escapeHtml(
+            t('Close')
+          ) +
+        '</button>'
       );
+
+      return;
+    }
+
+    openModal(
+      'Install BE-FIT',
+      'Install app',
+      '<p class="mb-0">' +
+        escapeHtml(
+          t('Open your browser menu and choose Install app or Add to Home Screen.')
+        ) +
+      '</p>',
+      '<button class="btn btn-brand" data-bs-dismiss="modal" type="button">' +
+        escapeHtml(
+          t('Close')
+        ) +
+      '</button>'
+    );
   }
 
   $(boot);
