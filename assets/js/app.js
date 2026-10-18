@@ -14,6 +14,8 @@
     selectedDate: null,
     currentSchedule: null,
     announcements: [],
+    unreadNotifications: 0,
+    notificationPollTimer: null,
     adminUsers: null,
     adminBookings: null,
     adminWaitlist: [],
@@ -514,6 +516,144 @@
     updateActiveNavigation();
   }
 
+  function notificationBadgeLabel() {
+    var count =
+      Math.max(
+        0,
+        Number(
+          state.unreadNotifications ||
+          0
+        )
+      );
+
+    if (!count) {
+      return '';
+    }
+
+    return count > 99
+      ? '99+'
+      : String(count);
+  }
+
+  function updateNotificationBadges() {
+    var count =
+      Math.max(
+        0,
+        Number(
+          state.unreadNotifications ||
+          0
+        )
+      );
+
+    var $links =
+      $('[data-nav-route="#/notifications"]');
+
+    $links
+      .find(
+        '.notification-nav-badge'
+      )
+      .remove();
+
+    $links.removeAttr(
+      'aria-label'
+    );
+
+    if (!count) {
+      return;
+    }
+
+    var label =
+      notificationBadgeLabel();
+
+    $links.each(
+      function () {
+        $(this)
+          .attr(
+            'aria-label',
+            'Notifications, ' +
+              count +
+              ' unread'
+          )
+          .append(
+            '<span class="notification-nav-badge" aria-hidden="true">' +
+              escapeHtml(label) +
+            '</span>'
+          );
+      }
+    );
+  }
+
+  async function refreshNotificationBadge() {
+    if (
+      !state.user ||
+      state.user.role !== 'member'
+    ) {
+      state.unreadNotifications = 0;
+      updateNotificationBadges();
+      return;
+    }
+
+    try {
+      var response =
+        await Api.get(
+          '/notifications'
+        );
+
+      var data =
+        response.data || {};
+
+      state.unreadNotifications =
+        Math.max(
+          0,
+          Number(
+            data.unread_count ||
+            0
+          )
+        );
+
+      updateNotificationBadges();
+
+    } catch (error) {
+      console.warn(
+        '[BE-FIT Notifications]',
+        'Unable to refresh unread count.',
+        error
+      );
+    }
+  }
+
+  function stopNotificationBadgePolling() {
+    if (
+      state.notificationPollTimer
+    ) {
+      window.clearInterval(
+        state.notificationPollTimer
+      );
+
+      state.notificationPollTimer =
+        null;
+    }
+  }
+
+  function startNotificationBadgePolling() {
+    stopNotificationBadgePolling();
+
+    if (
+      !state.user ||
+      state.user.role !== 'member'
+    ) {
+      return;
+    }
+
+    state.notificationPollTimer =
+      window.setInterval(
+        function () {
+          refreshNotificationBadge();
+        },
+        60000
+      );
+  }
+
   function updateActiveNavigation() {
     var hash = window.location.hash || '';
 
@@ -527,7 +667,12 @@
   }
 
   function showLogin() {
+    stopNotificationBadgePolling();
+
     state.user = null;
+    state.unreadNotifications = 0;
+
+    updateNotificationBadges();
 
     $('#appShell').addClass('d-none');
     $('#authView').removeClass('d-none');
@@ -551,6 +696,9 @@
 
     renderNavigation();
     refreshUserChrome();
+
+    refreshNotificationBadge();
+    startNotificationBadgePolling();
 
     var hash = window.location.hash;
 
@@ -1472,6 +1620,17 @@
           items: [],
           unread_count: 0
         };
+
+      state.unreadNotifications =
+        Math.max(
+          0,
+          Number(
+            data.unread_count ||
+            0
+          )
+        );
+
+      updateNotificationBadges();
 
       var rows =
         (

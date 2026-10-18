@@ -2031,3 +2031,50 @@ input:-webkit-autofill:focus {
   .help-hero-actions { display: grid; grid-template-columns: 1fr; }
   .help-rules-grid { grid-template-columns: 1fr; }
 }
+
+/* Notification unread badge ------------------------------ */
+
+[data-nav-route="#/notifications"] {
+  position: relative;
+}
+
+.notification-nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(219, 87, 38, .28);
+  pointer-events: none;
+}
+
+#desktopNav [data-nav-route="#/notifications"],
+#mobileDrawerNav [data-nav-route="#/notifications"] {
+  padding-right: 44px;
+}
+
+#desktopNav .notification-nav-badge,
+#mobileDrawerNav .notification-nav-badge {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+}
+
+.mobile-bottom-nav .mobile-nav-link {
+  position: relative;
+}
+
+.mobile-bottom-nav .notification-nav-badge {
+  position: absolute;
+  top: 3px;
+  left: calc(50% + 7px);
+  z-index: 2;
+}
