@@ -2078,3 +2078,38 @@ input:-webkit-autofill:focus {
   left: calc(50% + 7px);
   z-index: 2;
 }
+
+/* iPhone / iOS safe area -------------------------------- */
+
+@supports (padding-top: env(safe-area-inset-top)) {
+
+  /* Installed PWA on iPhone / iPad */
+  @media (display-mode: standalone) {
+    .app-header {
+      min-height: calc(var(--header-height) + var(--safe-top));
+      padding-top: calc(12px + var(--safe-top));
+      padding-right: calc(16px + var(--safe-right));
+      padding-left: calc(16px + var(--safe-left));
+    }
+
+    .mobile-drawer .offcanvas-header {
+      padding-top: calc(16px + var(--safe-top));
+      padding-right: calc(16px + var(--safe-right));
+      padding-left: calc(16px + var(--safe-left));
+    }
+  }
+
+  /* Capacitor native app */
+  html.is-native .app-header {
+    min-height: calc(var(--header-height) + var(--safe-top));
+    padding-top: calc(12px + var(--safe-top));
+    padding-right: calc(16px + var(--safe-right));
+    padding-left: calc(16px + var(--safe-left));
+  }
+
+  html.is-native .mobile-drawer .offcanvas-header {
+    padding-top: calc(16px + var(--safe-top));
+    padding-right: calc(16px + var(--safe-right));
+    padding-left: calc(16px + var(--safe-left));
+  }
+}
