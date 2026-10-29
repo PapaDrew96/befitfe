@@ -12,6 +12,7 @@ const dist = resolve(root, 'dist');
 
 const entries = [
   'index.html',
+  'privacy.html',
   'manifest.webmanifest',
   'assets'
 ];

@@ -14,6 +14,7 @@
   "Forgot password?": "Ξέχασες τον κωδικό;",
   "Sign in": "Σύνδεση",
   "Need an account? Ask the gym administrator to create your member profile.": "Χρειάζεσαι λογαριασμό; Ζήτησε από τον διαχειριστή του γυμναστηρίου να δημιουργήσει το προφίλ σου.",
+  "Privacy Policy": "Πολιτική Απορρήτου",
   "Training Center": "Κέντρο Προπόνησης",
   "Install app": "Εγκατάσταση εφαρμογής",
   "Log out": "Αποσύνδεση",

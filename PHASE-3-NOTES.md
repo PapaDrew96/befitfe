@@ -17,6 +17,7 @@
 - `service-worker.js`
 - `manifest.webmanifest`
 
-## Deployment
+## DeploymeIIIF
+IF ()
 
 Replace only those four files on production. Keep the existing optimized images and `.htaccess` from Phase 2.

@@ -1,18 +1,19 @@
 'use strict';
 
-const CACHE_NAME = 'befit-shell-v21';
+const CACHE_NAME = 'befit-shell-v22';
 
 const APP_SHELL = [
   './index.html',
+  './privacy.html',
   './manifest.webmanifest?v=19',
   './assets/css/style.css?v=20',
   './assets/vendor/bootstrap/css/bootstrap.min.css?v=20',
   './assets/vendor/jquery/jquery.min.js?v=20',
   './assets/vendor/bootstrap/js/bootstrap.bundle.min.js?v=20',
   './assets/js/config.js?v=19',
-  './assets/js/i18n.js?v=19',
+  './assets/js/i18n.js?v=20',
   './assets/js/api.js?v=19',
-  './assets/js/app.js?v=19',
+  './assets/js/app.js?v=20',
   './assets/img/logo1.png?v=19',
   './assets/img/icon-192.png?v=19',
   './assets/img/icon-512.png?v=19'
@@ -67,19 +68,23 @@ self.addEventListener('fetch', event => {
 
   // HTML/navigation: network first so deployments are picked up immediately.
   if (request.mode === 'navigate') {
+    const navigationCacheKey = url.pathname.endsWith('/privacy.html')
+      ? './privacy.html'
+      : './index.html';
+
     event.respondWith(
       fetch(request, { cache: 'no-store' })
         .then(response => {
           if (response && response.ok) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then(cache => {
-              cache.put('./index.html', clone);
+              cache.put(navigationCacheKey, clone);
             });
           }
 
           return response;
         })
-        .catch(() => caches.match('./index.html'))
+        .catch(() => caches.match(navigationCacheKey))
     );
 
     return;

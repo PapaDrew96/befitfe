@@ -1541,6 +1541,11 @@
                 '</strong>.' +
               '</div>' +
 
+              '<a class="btn btn-soft w-100 mb-2" href="privacy.html">' +
+                icon('shield') +
+                ' Privacy Policy' +
+              '</a>' +
+
               '<button id="profileInstallButton" class="btn btn-soft w-100 mb-2' +
                 (
                   config.IS_NATIVE ||
