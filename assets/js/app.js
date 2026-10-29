@@ -1565,6 +1565,23 @@
 
             '</section>' +
 
+            '<section class="section-card border border-danger-subtle">' +
+
+              '<h2 class="section-card-title mb-2 text-danger">' +
+                'Delete account' +
+              '</h2>' +
+
+              '<p class="section-card-subtitle mb-3">' +
+                'Permanently delete your BE-FIT account and personal profile data.' +
+              '</p>' +
+
+              '<button id="deleteAccountButton" class="btn btn-outline-danger w-100" type="button">' +
+                icon('trash') +
+                ' Delete account' +
+              '</button>' +
+
+            '</section>' +
+
             '<section class="section-card">' +
 
               '<div class="d-flex gap-3 align-items-start">' +
@@ -2647,6 +2664,102 @@
 
         } finally {
           showLoader(false);
+        }
+      }
+    );
+
+    $(document).on(
+      'click',
+      '#deleteAccountButton',
+      function () {
+        openModal(
+          'Delete account',
+          'Account',
+          '<div class="alert alert-danger border-0">' +
+            '<strong>This action cannot be undone.</strong>' +
+          '</div>' +
+          '<p>Your future bookings will be cancelled and your active sessions will be signed out.</p>' +
+          '<p class="small text-muted">Historical booking and attendance records may be retained only in anonymized form or where legally required.</p>' +
+          '<form id="deleteAccountForm">' +
+            '<div class="mb-3">' +
+              '<label class="form-label">Current password</label>' +
+              '<input name="current_password" type="password" class="form-control" autocomplete="current-password" required>' +
+            '</div>' +
+            '<div class="form-check">' +
+              '<input id="deleteAccountConfirm" class="form-check-input" type="checkbox" required>' +
+              '<label class="form-check-label" for="deleteAccountConfirm">' +
+                'I understand that deleting my account is permanent.' +
+              '</label>' +
+            '</div>' +
+          '</form>',
+          '<button class="btn btn-light" data-bs-dismiss="modal" type="button">Cancel</button>' +
+          '<button class="btn btn-danger" type="submit" form="deleteAccountForm">' +
+            '<span class="button-label">Delete my account</span>' +
+            '<span class="spinner-border spinner-border-sm ms-2 d-none"></span>' +
+          '</button>'
+        );
+      }
+    );
+
+    $(document).on(
+      'submit',
+      '#deleteAccountForm',
+      async function (event) {
+        event.preventDefault();
+
+        var $form = $(this);
+        var $button = $('#appModalFooter button[type=submit]');
+
+        if (!$('#deleteAccountConfirm').is(':checked')) {
+          toast(
+            'I understand that deleting my account is permanent.',
+            'danger'
+          );
+          return;
+        }
+
+        setBusy(
+          $button,
+          true,
+          'Deleting…'
+        );
+
+        try {
+          await Api.delete(
+            '/profile/account',
+            {
+              current_password: $form.find('[name=current_password]').val() || '',
+              confirm: true
+            },
+            { timeout: 30000 }
+          );
+
+          Api.clearSession();
+          stopNotificationBadgePolling();
+          state.user = null;
+          state.unreadNotifications = 0;
+          updateNotificationBadges();
+
+          appModal.hide();
+          showLogin();
+
+          toast(
+            'Your account has been deleted.',
+            'success'
+          );
+
+        } catch (error) {
+          toast(
+            Api.errorMessage(error),
+            'danger'
+          );
+
+        } finally {
+          setBusy(
+            $button,
+            false,
+            'Delete my account'
+          );
         }
       }
     );
