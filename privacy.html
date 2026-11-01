@@ -72,6 +72,20 @@
       .privacy-card { border-radius: 18px; }
       .privacy-brand small { display: none; }
     }
+
+    .privacy-back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 20px;
+      font-weight: 600;
+      color: var(--brand, #db5726);
+      text-decoration: none;
+    }
+
+    .privacy-back-link:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body class="privacy-page">
@@ -90,6 +104,9 @@
 
   <main class="privacy-main">
     <article class="privacy-card" data-policy-language="en">
+      <a href="index.html" class="privacy-back-link">
+      ← Back to app
+    </a>
       <p class="eyebrow text-brand mb-2">BE-FIT TRAINING CENTER</p>
       <h1>Privacy Policy</h1>
       <p class="privacy-meta">Last updated: October 29, 2026</p>
@@ -231,6 +248,9 @@
     </article>
 
     <article class="privacy-card" data-policy-language="el" hidden>
+      <a href="index.html" class="privacy-back-link">
+  ← Πίσω στην εφαρμογή
+</a>
       <p class="eyebrow text-brand mb-2">BE-FIT TRAINING CENTER</p>
       <h1>Πολιτική Απορρήτου</h1>
       <p class="privacy-meta">Τελευταία ενημέρωση: 29 Οκτωβρίου 2026</p>
