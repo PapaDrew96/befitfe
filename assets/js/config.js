@@ -40,7 +40,7 @@
 
   window.BEFIT_CONFIG = Object.freeze({
     APP_NAME: 'BE-FIT Training Center',
-    BUILD_VERSION: '19',
+    BUILD_VERSION: '22',
     IS_NATIVE: isNative,
     PLATFORM: platform,
     API_BASE_URL: apiBaseUrl,

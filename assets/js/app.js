@@ -4,12 +4,14 @@
   var Api = window.BefitApi;
   var config = window.BEFIT_CONFIG;
   var I18n = window.BefitI18n;
+  var Push = window.BefitPush;
   function t(value) { return I18n ? I18n.t(value) : value; }
 
   var state = {
     user: null,
     settings: null,
     route: '',
+    routeQuery: {},
     weekDate: null,
     selectedDate: null,
     currentSchedule: null,
@@ -654,13 +656,63 @@
       );
   }
 
+  function parseRouteHash(hash) {
+    var raw = hash || '#/';
+    var parts = raw.split('?');
+    var path = parts[0] || '#/';
+    var query = {};
+
+    if (parts.length > 1) {
+      new URLSearchParams(parts.slice(1).join('?')).forEach(function (value, key) {
+        query[key] = value;
+      });
+    }
+
+    return {
+      raw: raw,
+      path: path,
+      query: query
+    };
+  }
+
+  function openPushRoute(pushRoute) {
+    if (!Push || !state.user || state.user.must_change_password) {
+      return false;
+    }
+
+    var safe = Push.safeRoute(pushRoute);
+    if (!safe) {
+      return false;
+    }
+
+    if (window.location.hash === safe) {
+      route();
+      return true;
+    }
+
+    window.location.hash = safe;
+    return true;
+  }
+
+  function registerPushForCurrentUser() {
+    if (!Push || !config.IS_NATIVE || !state.user) {
+      return;
+    }
+
+    Push.registerForCurrentUser().catch(function (error) {
+      if (window.console && console.warn) {
+        console.warn('[BE-FIT PUSH] Registration lifecycle failed.', error);
+      }
+    });
+  }
+
   function updateActiveNavigation() {
-    var hash = window.location.hash || '';
+    var activePath = parseRouteHash(window.location.hash || '').path;
 
     $('[data-nav-route]')
       .removeClass('active')
       .each(function () {
-        if ($(this).attr('data-nav-route') === hash) {
+        if ($(this).attr('data-nav-route') === activePath) {
           $(this).addClass('active');
         }
       });
@@ -699,6 +751,21 @@
 
     refreshNotificationBadge();
     startNotificationBadgePolling();
+    registerPushForCurrentUser();
+
+    var pendingPushRoute =
+      Push && !state.user.must_change_password
+        ? Push.takePendingRoute()
+        : '';
+
+    if (pendingPushRoute) {
+      if (window.location.hash === pendingPushRoute) {
+        route();
+      } else {
+        window.location.hash = pendingPushRoute;
+      }
+      return;
+    }
 
     var hash = window.location.hash;
 
@@ -746,6 +813,15 @@
     hydrateIcons(document);
     bindGlobalEvents();
     registerPwa();
+
+    if (Push) {
+      Push.setRouteHandler(openPushRoute);
+      Push.init().catch(function (error) {
+        if (window.console && console.warn) {
+          console.warn('[BE-FIT PUSH] Listener initialisation failed.', error);
+        }
+      });
+    }
 
     var isResetLink =
       /^#\/reset-password\?token=[a-f0-9]{64}$/i
@@ -799,19 +875,22 @@
   }
 
   function allowedRoute(hash) {
+    var parsed = parseRouteHash(hash);
+    var path = parsed.path;
+
     if (!state.user) {
       return false;
     }
 
     if (
       state.user.must_change_password &&
-      hash !== '#/profile'
+      path !== '#/profile'
     ) {
       return false;
     }
 
     if (
-      hash.indexOf('#/admin/') === 0 &&
+      path.indexOf('#/admin/') === 0 &&
       state.user.role !== 'admin'
     ) {
       return false;
@@ -842,8 +921,16 @@
       return;
     }
 
-    state.route = hash;
+    var parsedRoute = parseRouteHash(hash);
+
+    state.route = parsedRoute.path;
+    state.routeQuery = parsedRoute.query;
     state.routeVersion += 1;
+
+    if (state.route === '#/schedule' && state.routeQuery.date) {
+      state.weekDate = state.routeQuery.date;
+      state.selectedDate = state.routeQuery.date;
+    }
 
     updateActiveNavigation();
     closeMobileDrawer();
@@ -853,7 +940,7 @@
       behavior: 'auto'
     });
 
-    switch (hash) {
+    switch (state.route) {
       case '#/schedule':
         return renderSchedulePage();
 
@@ -1621,6 +1708,151 @@
   }
 
   /* Member notifications */
+  function notificationRoute(notification) {
+    var data = notification && notification.data ? notification.data : {};
+
+    if (data.route && /^#\/(bookings|schedule|payments|notifications)(?:\?|$)/.test(data.route)) {
+      return data.route;
+    }
+
+    if (data.booking_id) {
+      return '#/bookings?booking_id=' + encodeURIComponent(data.booking_id);
+    }
+
+    if (data.session_id) {
+      var scheduleRoute = '#/schedule?session_id=' + encodeURIComponent(data.session_id);
+      if (data.date) {
+        scheduleRoute += '&date=' + encodeURIComponent(data.date);
+      }
+      return scheduleRoute;
+    }
+
+    if (data.payment_id) {
+      return '#/payments?payment_id=' + encodeURIComponent(data.payment_id);
+    }
+
+    return '#/notifications';
+  }
+
+  function notificationSlot(data) {
+    data = data || {};
+
+    var parts = [];
+
+    if (data.date) {
+      parts.push(
+        formatDate(data.date, {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long'
+        })
+      );
+    }
+
+    if (data.start_time) {
+      parts.push(
+        data.start_time +
+        (data.end_time ? '–' + data.end_time : '')
+      );
+    }
+
+    return parts.join(' · ');
+  }
+
+  function notificationPresentation(notification) {
+    var data = notification && notification.data ? notification.data : {};
+    var type = notification ? notification.type : '';
+    var greek = I18n && I18n.isGreek();
+    var slot = notificationSlot(data);
+    var title = notification && notification.title ? notification.title : 'Notification';
+    var body = notification && notification.body ? notification.body : '';
+
+    switch (type) {
+      case 'booking_confirmed':
+        title = greek ? 'Η κράτησή σου επιβεβαιώθηκε' : 'Booking confirmed';
+        body = greek
+          ? (slot ? slot + '. Η θέση σου έχει κρατηθεί.' : 'Η θέση σου έχει κρατηθεί.')
+          : (slot ? slot + '. Your training place has been reserved.' : 'Your training place has been reserved.');
+        break;
+
+      case 'booking_cancelled':
+        title = greek ? 'Η κράτησή σου ακυρώθηκε' : 'Booking cancelled';
+        body = greek
+          ? (slot ? slot + '. Η κράτηση δεν είναι πλέον ενεργή.' : 'Η κράτηση δεν είναι πλέον ενεργή.')
+          : (slot ? slot + '. This booking is no longer active.' : 'This booking is no longer active.');
+        break;
+
+      case 'waitlist_promoted':
+        title = greek ? 'Βρέθηκε θέση!' : 'A place became available';
+        body = greek
+          ? (slot ? slot + '. Μεταφέρθηκες αυτόματα από τη λίστα αναμονής στην προπόνηση.' : 'Μεταφέρθηκες αυτόματα από τη λίστα αναμονής στην προπόνηση.')
+          : (slot ? slot + '. You were automatically moved from the waiting list into the session.' : 'You were automatically moved from the waiting list into the session.');
+        break;
+
+      case 'session_changed':
+        if (data.status === 'cancelled') {
+          title = greek ? 'Η προπόνησή σου ακυρώθηκε' : 'Training session cancelled';
+          body = greek
+            ? (slot ? slot + '. Η προπόνηση ακυρώθηκε. Έλεγξε τις κρατήσεις σου.' : 'Η προπόνηση ακυρώθηκε. Έλεγξε τις κρατήσεις σου.')
+            : (slot ? slot + '. The session was cancelled. Please review your bookings.' : 'The session was cancelled. Please review your bookings.');
+        } else if (data.status === 'closed') {
+          title = greek ? 'Η προπόνηση έκλεισε' : 'Training session closed';
+          body = greek
+            ? (slot ? slot + '. Η προπόνηση δεν είναι πλέον ανοικτή. Έλεγξε την κράτησή σου.' : 'Η προπόνηση δεν είναι πλέον ανοικτή. Έλεγξε την κράτησή σου.')
+            : (slot ? slot + '. The session is no longer open. Please review your booking.' : 'The session is no longer open. Please review your booking.');
+        } else {
+          title = greek ? 'Άλλαξε η προπόνησή σου' : 'Training session updated';
+          body = greek
+            ? (slot ? 'Νέα ημερομηνία/ώρα: ' + slot + '. Έλεγξε την κράτησή σου.' : 'Η ημερομηνία ή η ώρα της προπόνησης άλλαξε. Έλεγξε την κράτησή σου.')
+            : (slot ? 'New date/time: ' + slot + '. Please review your booking.' : 'The session date or time changed. Please review your booking.');
+        }
+        break;
+
+      case 'waitlist_released':
+        title = greek ? 'Η λίστα αναμονής έκλεισε' : 'Waiting list closed';
+        body = greek
+          ? (slot ? slot + '. Η εγγραφή σου στη λίστα αναμονής αφαιρέθηκε.' : 'Η εγγραφή σου στη λίστα αναμονής αφαιρέθηκε.')
+          : (slot ? slot + '. Your waiting-list entry was released.' : 'Your waiting-list entry was released.');
+        break;
+
+      case 'gym_closed':
+        title = greek ? 'Το γυμναστήριο θα είναι κλειστό' : 'Gym closed';
+        body = greek
+          ? (slot ? slot + '. Η κράτησή σου ακυρώθηκε.' : 'Η κράτησή σου ακυρώθηκε.')
+          : (slot ? slot + '. Your reservation has been cancelled.' : 'Your reservation has been cancelled.');
+        if (data.reason) {
+          body += ' ' + data.reason;
+        }
+        break;
+
+      case 'payment_confirmed':
+        title = greek ? 'Η πληρωμή καταχωρήθηκε' : 'Payment confirmed';
+        body = data.valid_until
+          ? (greek
+              ? 'Η συνδρομή σου ισχύει έως ' + formatDate(data.valid_until) + '.'
+              : 'Your membership is valid until ' + formatDate(data.valid_until) + '.')
+          : (greek ? 'Η πληρωμή της συνδρομής σου επιβεβαιώθηκε.' : 'Your membership payment was confirmed.');
+        break;
+
+      case 'session_reminder':
+        title = greek ? 'Υπενθύμιση προπόνησης' : 'Training reminder';
+        body = greek
+          ? (slot ? 'Η προπόνησή σου είναι ' + slot + '.' : 'Έχεις προγραμματισμένη προπόνηση.')
+          : (slot ? 'Your training session is ' + slot + '.' : 'You have an upcoming training session.');
+        break;
+
+      default:
+        title = t(title);
+        body = t(body);
+    }
+
+    return {
+      title: title,
+      body: body,
+      route: notificationRoute(notification)
+    };
+  }
+
   async function renderNotificationsPage() {
     setPageMeta(
       'Notifications',
@@ -1660,6 +1892,8 @@
           []
         ).map(
           function (notification) {
+            var presentation = notificationPresentation(notification);
+
             return '' +
               '<article class="notification-card' +
                 (
@@ -1684,7 +1918,7 @@
 
                     '<h3>' +
                       escapeHtml(
-                        notification.title
+                        presentation.title
                       ) +
                     '</h3>' +
 
@@ -1700,19 +1934,26 @@
 
                   '<p>' +
                     escapeHtml(
-                      notification.body
+                      presentation.body
                     ) +
                   '</p>' +
 
-                  (
-                    !notification.read_at
-                      ? '<button class="btn btn-sm btn-light" type="button" data-notification-read="' +
-                          notification.id +
-                        '">' +
-                          'Mark as read' +
-                        '</button>'
-                      : ''
-                  ) +
+                  '<div class="d-flex flex-wrap gap-2 mt-2">' +
+                    (
+                      !notification.read_at
+                        ? '<button class="btn btn-sm btn-light" type="button" data-notification-read="' +
+                            notification.id +
+                          '">' +
+                            'Mark as read' +
+                          '</button>'
+                        : ''
+                    ) +
+                    '<button class="btn btn-sm btn-soft" type="button" data-notification-open="' +
+                      escapeHtml(presentation.route) +
+                    '" data-notification-id="' + notification.id + '">' +
+                      'View details' +
+                    '</button>' +
+                  '</div>' +
 
                 '</div>' +
 
@@ -2038,6 +2279,17 @@
         );
 
         showLogin();
+      }
+    );
+
+    document.addEventListener(
+      'befit:push-received',
+      function () {
+        refreshNotificationBadge();
+
+        if (state.route === '#/notifications') {
+          renderNotificationsPage();
+        }
       }
     );
 
@@ -2733,6 +2985,10 @@
             },
             { timeout: 30000 }
           );
+
+          if (Push) {
+            await Push.clearAfterAccountDeletion();
+          }
 
           Api.clearSession();
           stopNotificationBadgePolling();
@@ -3984,6 +4240,27 @@
 
     $(document).on(
       'click',
+      '[data-notification-open]',
+      async function () {
+        var routeValue = $(this).attr('data-notification-open') || '#/notifications';
+        var notificationId = parseInt($(this).attr('data-notification-id'), 10);
+
+        if (notificationId) {
+          try {
+            await Api.patch('/notifications/' + notificationId + '/read', {});
+            state.unreadNotifications = Math.max(0, state.unreadNotifications - 1);
+            updateNotificationBadges();
+          } catch (error) {
+            /* Opening the destination is more important than the read-state update. */
+          }
+        }
+
+        window.location.hash = routeValue;
+      }
+    );
+
+    $(document).on(
+      'click',
       '[data-notification-read]',
       async function () {
         try {
@@ -4319,6 +4596,10 @@
     showLoader(true);
 
     try {
+      if (Push) {
+        await Push.unregisterCurrentUser();
+      }
+
       await Api.post(
         '/auth/logout',
         {}

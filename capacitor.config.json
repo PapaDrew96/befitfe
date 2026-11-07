@@ -1,5 +1,10 @@
 {
   "appId": "gr.befittraining.app",
   "appName": "BE-FIT",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  }
 }

@@ -43,6 +43,27 @@
     var generateTemporaryPassword = ctx.generateTemporaryPassword;
     var route = ctx.route;
 
+  function focusDeepLinkedItem(selector) {
+    var element = document.querySelector(selector);
+
+    if (!element) {
+      return;
+    }
+
+    element.classList.add('notification-target');
+
+    window.setTimeout(function () {
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }, 80);
+
+    window.setTimeout(function () {
+      element.classList.remove('notification-target');
+    }, 5000);
+  }
+
   /* Member schedule */
   async function renderSchedulePage(options) {
     options = options || {};
@@ -333,6 +354,10 @@
 
       '</div>'
     );
+
+    if (state.routeQuery && /^\d+$/.test(state.routeQuery.session_id || '')) {
+      focusDeepLinkedItem('[data-session-id="' + state.routeQuery.session_id + '"]');
+    }
   }
 
   function sessionCard(session) {
@@ -465,7 +490,7 @@
     }
 
     return '' +
-      '<article class="' + classes + '">' +
+      '<article class="' + classes + '" data-session-id="' + session.id + '">' +
 
         '<div class="session-main">' +
 
@@ -666,6 +691,10 @@
 
       $('#pageContent').html(html);
 
+      if (state.routeQuery && /^\d+$/.test(state.routeQuery.booking_id || '')) {
+        focusDeepLinkedItem('[data-booking-id="' + state.routeQuery.booking_id + '"]');
+      }
+
     } catch (error) {
       $('#pageContent').html(
         emptyState(
@@ -695,7 +724,7 @@
             ? ' cancelled'
             : ''
         ) +
-      '">' +
+      '" data-booking-id="' + booking.id + '">' +
 
         '<div class="booking-date-box">' +
           '<div>' +
@@ -822,7 +851,7 @@
         history.map(
           function (item) {
             return '' +
-              '<tr>' +
+              '<tr data-payment-id="' + item.id + '">' +
                 '<td>' +
                   escapeHtml(
                     formatDate(
@@ -970,6 +999,10 @@
 
         '</section>'
       );
+
+      if (state.routeQuery && /^\d+$/.test(state.routeQuery.payment_id || '')) {
+        focusDeepLinkedItem('[data-payment-id="' + state.routeQuery.payment_id + '"]');
+      }
 
     } catch (error) {
       $('#pageContent').html(

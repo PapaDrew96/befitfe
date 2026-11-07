@@ -486,6 +486,8 @@
   "Local debug reset token created.": "Δημιουργήθηκε τοπικό debug token επαναφοράς.",
   "Mark all read": "Σήμανση όλων ως αναγνωσμένα",
   "Mark as read": "Σήμανση ως αναγνωσμένο",
+  "View details": "Προβολή λεπτομερειών",
+  "Notification": "Ειδοποίηση",
   "Member notice": "Ανακοίνωση μέλους",
   "Members will no longer see this notice.": "Τα μέλη δεν θα βλέπουν πλέον αυτή την ανακοίνωση.",
   "Message": "Μήνυμα",

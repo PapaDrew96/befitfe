@@ -2130,3 +2130,10 @@ input:-webkit-autofill:focus {
     }
   }
 }
+/* Notification deep-link target */
+.notification-target {
+  outline: 3px solid rgba(16, 185, 129, 0.45);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.08);
+  transition: outline-color 0.25s ease, box-shadow 0.25s ease;
+}
